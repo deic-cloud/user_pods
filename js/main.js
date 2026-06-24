@@ -258,7 +258,9 @@
 		apiGet('api/containers', 'Retrieving table data…')
 			.then((data) => {
 				if (!Array.isArray(data)) {
-					alertError(t(APP, 'get_containers: Something went wrong…'))
+					// A non-array response is an error body {status:'error',data:{message}}
+					// (e.g. the host service is unreachable) — show why.
+					alertError(t(APP, 'get_containers: ') + (hostMessage(data) || t(APP, 'Something went wrong…')))
 					return
 				}
 				const expandedNames = $all('#podstable #fileList tr.simple-row .expand-view.icon-down-open')
@@ -317,7 +319,7 @@
 		apiPost('api/pod/allowed-ips', { pod: podName, ips: ips }, 'Setting firewall rules…')
 			.then((json) => {
 				if (!hostOk(json)) {
-					alertError(t(APP, 'set_allowed_ips: Something went wrong…'))
+					alertError(t(APP, 'set_allowed_ips: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 					setStatusText(podName, 'Setting allowed IPs failed')
 				}
 			})
@@ -331,7 +333,7 @@
 		}, 'Setting port numbers…')
 			.then((json) => {
 				if (!hostOk(json)) {
-					alertError(t(APP, 'set_port_numbers: Something went wrong… ') + hostMessage(json))
+					alertError(t(APP, 'set_port_numbers: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 					setStatusText(podName, 'Setting port numbers failed')
 				}
 			})
@@ -348,7 +350,7 @@
 					$all('tr[data-pod-name="' + cssEscape(podName) + '"]').forEach((tr) => tr.remove())
 					updateContainerCount()
 				} else {
-					alertError(t(APP, 'delete_pod: Something went wrong…'))
+					alertError(t(APP, 'delete_pod: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 					if (delLink) show(delLink, true)
 					setStatusText(podName, 'Delete failed')
 				}

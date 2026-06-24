@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\UserPods\Service;
 
+use OCA\UserPods\Exception\PodHostException;
 use OCP\Http\Client\IClientService;
 use OCP\IAppConfig;
 use Psr\Log\LoggerInterface;
@@ -43,7 +44,16 @@ class PodService {
 		return $this->rawManifestsURL;
 	}
 
-	/** GET a URL, returning the body as a string (empty string on failure). */
+	/**
+	 * GET a URL and return the body as a string.
+	 *
+	 * A successful but empty body returns '' (e.g. get_containers with no pods —
+	 * a legitimate result, not an error). A transport-level failure throws
+	 * PodHostException so the caller/controller can surface it to the user
+	 * instead of it vanishing into an empty response. (Previously this swallowed
+	 * every failure into '', which is exactly how the IClientService SSRF block
+	 * silently turned the whole app into a no-op — see allow_local_address below.)
+	 */
 	private function httpGet(string $url, bool $verify = true): string {
 		try {
 			$response = $this->clientService->newClient()->get($url, [
@@ -61,8 +71,10 @@ class PodService {
 			]);
 			return (string)$response->getBody();
 		} catch (\Throwable $e) {
-			$this->logger->warning('user_pods GET ' . $url . ': ' . $e->getMessage(), ['app' => 'user_pods']);
-			return '';
+			$host = parse_url($url, PHP_URL_HOST) ?: $url;
+			$this->logger->error('user_pods: host call failed (GET ' . $url . '): ' . $e->getMessage(),
+				['app' => 'user_pods', 'exception' => $e]);
+			throw new PodHostException('Pod host service unreachable (' . $host . '): ' . $e->getMessage(), 0, $e);
 		}
 	}
 
