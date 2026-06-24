@@ -131,12 +131,20 @@
 	padding-bottom: 6px;
 }
 
-#podstable .summary .info {
-	margin-left: 0;
+/* Footer container count — match the files app's list footer
+   (muted text, a top border separating it from the rows, transparent bg). */
+#podstable tfoot tr.summary td {
+	border-top: 1px solid var(--color-border);
+	background-color: transparent;
+	color: var(--color-text-maxcontrast);
+	font-weight: normal;
+	text-align: left;
+	user-select: none;
+	padding: 12px 8px;
 }
 
-#podstable .summary {
-	height: 58px;
+#podstable .pods-count {
+	margin-left: 0;
 }
 
 #podstable .delete-pod,
@@ -160,27 +168,6 @@
 
 #podstable tbody a {
 	color: var(--color-primary-element, #0376a3);
-}
-
-#app-content-kubernetes .info {
-	position: sticky;
-	top: 24px;
-	text-align: left;
-	font-size: 14px;
-	font-weight: bold;
-	width: 78%;
-	margin: 0 auto -44px;
-	z-index: 10;
-	font-style: italic;
-	color: #006b93;
-	background: #c9fbfb8c;
-	border: 1px solid #395058;
-	border-radius: 4px;
-	padding: 4px;
-}
-
-#app-content-kubernetes .info a {
-	text-decoration: underline;
 }
 
 #podstable .expanded-row {

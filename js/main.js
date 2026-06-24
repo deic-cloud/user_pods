@@ -214,7 +214,7 @@
 		const count = $all('#podstable tbody#fileList tr.simple-row').length
 		const cell = $('#podstable tfoot .summary td')
 		if (!cell) return
-		cell.innerHTML = '<span class="info" data-containers="' + count + '">' + count + ' '
+		cell.innerHTML = '<span class="pods-count" data-containers="' + count + '">' + count + ' '
 			+ (count === 1 ? t(APP, 'container') : t(APP, 'containers')) + '</span>'
 	}
 

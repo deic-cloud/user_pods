@@ -3,16 +3,9 @@
 /** @var array $_ */
 \OCP\Util::addScript('user_pods', 'main');
 \OCP\Util::addStyle('user_pods', 'main');
-$fromEmail = \OCP\Server::get(\OCP\IConfig::class)->getSystemValue('fromemail', '');
 ?>
 <div id="app-content">
-	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p($_SERVER['REMOTE_ADDR'] ?? ''); ?>" data-from-email="<?php p($fromEmail); ?>">
-		<div class="info">
-			<?php p($l->t('Notice: Pods are in beta testing. Use at your own risk — pods may be deleted, terminated or restarted.')); ?>
-			<?php if ($fromEmail !== '') { ?>
-				<a href="mailto:<?php p($fromEmail); ?>"><?php p($l->t('We appreciate feedback.')); ?></a>
-			<?php } ?>
-		</div>
+	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p($_SERVER['REMOTE_ADDR'] ?? ''); ?>">
 		<div id="controls">
 			<div class="row">
 				<div class="text-right">
@@ -22,7 +15,7 @@ $fromEmail = \OCP\Server::get(\OCP\IConfig::class)->getSystemValue('fromemail', 
 							<div class="icon-loading-dark"></div>
 						</div>
 						<div id="create">
-							<a id="pod-create" class="button primary" href="#"><?php p($l->t('New pod')); ?></a>
+							<button id="pod-create" type="button" class="button primary"><?php p($l->t('New pod')); ?></button>
 						</div>
 					</div>
 				</div>
@@ -84,7 +77,7 @@ $fromEmail = \OCP\Server::get(\OCP\IConfig::class)->getSystemValue('fromemail', 
 				<tbody id="fileList"></tbody>
 				<tfoot>
 					<tr class="summary text-sm">
-						<td><span class="info" data-containers="0"></span></td>
+						<td><span class="pods-count" data-containers="0"></span></td>
 					</tr>
 				</tfoot>
 			</table>
