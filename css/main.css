@@ -1,0 +1,257 @@
+/* user_pods — pod management UI (NC34 port of OC7 css/style.css). */
+
+#app-content-kubernetes {
+	padding: 20px;
+}
+
+.spanpanel {
+	margin-left: 1.5%;
+	margin-right: 16px;
+}
+
+#pod-create {
+	z-index: 1;
+}
+
+.apanel {
+	width: 100%;
+	border: solid 1px var(--color-border, #e4e4e4);
+	border-radius: var(--border-radius, 4px);
+	margin-bottom: 20px;
+	display: none;
+	user-select: text;
+}
+
+.apanel pre {
+	user-select: text;
+}
+
+#ssh,
+#file,
+#cvmfs,
+#setup,
+#peers,
+#storage {
+	padding-left: 1.5%;
+	padding-top: 1%;
+}
+
+#file input,
+#cvmfs input,
+#setup input,
+#peers input {
+	width: 480px;
+	max-width: 90%;
+}
+
+#file_text,
+#peers_text {
+	margin-right: 12px;
+}
+
+.newpod-span {
+	float: right;
+	margin-right: 10px;
+	margin-top: 12px;
+}
+
+#public_key {
+	min-width: 60% !important;
+	min-height: 82px !important;
+}
+
+#storage input {
+	width: 240px;
+	max-width: 90%;
+}
+
+#description {
+	padding-left: 1.5%;
+	padding-right: 1.5%;
+	padding-top: 1%;
+}
+
+#description h1,
+#description h2,
+#description h3 {
+	margin: 8px 0 4px;
+}
+
+#yaml_file {
+	line-height: 1.5;
+	padding: 2px 0 4px 5px;
+	margin-top: 10px;
+	margin-left: 15px;
+	position: relative;
+}
+
+.btn-pod {
+	position: relative;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.text-right {
+	margin-right: 19px;
+}
+
+#ssh,
+#storage,
+#loading,
+#file,
+#peers {
+	display: none;
+}
+
+#loading-text {
+	text-align: center;
+}
+
+#loading {
+	position: fixed;
+	left: 47%;
+	background-color: #b5cc2d4d;
+	padding: 8px;
+	z-index: 10;
+}
+
+.running_pods {
+	padding-left: 1%;
+}
+
+#running_pods {
+	overflow-x: auto;
+}
+
+#podstable {
+	width: 100%;
+}
+
+#newpod {
+	padding-bottom: 6px;
+}
+
+#podstable .summary .info {
+	margin-left: 0;
+}
+
+#podstable .summary {
+	height: 58px;
+}
+
+#podstable .delete-pod,
+#podstable .expand-view {
+	text-decoration: none;
+	color: var(--color-text-maxcontrast, #c5c5c5);
+	font-size: 16px;
+	background-image: none;
+	padding: 0 5px;
+}
+
+.app-user_pods .icon-loading-dark {
+	background-size: 16px;
+}
+
+#pods_refresh {
+	font-size: 24px;
+	margin-left: 8px;
+	height: 35px;
+}
+
+#podstable tbody a {
+	color: var(--color-primary-element, #0376a3);
+}
+
+#app-content-kubernetes .info {
+	position: sticky;
+	top: 24px;
+	text-align: left;
+	font-size: 14px;
+	font-weight: bold;
+	width: 78%;
+	margin: 0 auto -44px;
+	z-index: 10;
+	font-style: italic;
+	color: #006b93;
+	background: #c9fbfb8c;
+	border: 1px solid #395058;
+	border-radius: 4px;
+	padding: 4px;
+}
+
+#app-content-kubernetes .info a {
+	text-decoration: underline;
+}
+
+#podstable .expanded-row {
+	background: var(--color-main-background, #ffffff);
+}
+
+#podstable .expanded-column-name {
+	text-align: right;
+	width: 0;
+	white-space: nowrap;
+}
+
+#podstable .expanded-table {
+	width: 100%;
+}
+
+#podstable td.td-button {
+	text-align: center;
+	padding-top: 3px;
+}
+
+#podstable th.th-button {
+	width: 0;
+}
+
+#podstable tbody tr.simple-row td div[data-column="status"] span,
+#podstable tbody tr.expanded-row table td.expanded-column-value span {
+	white-space: normal;
+	word-wrap: break-word;
+}
+
+.key_buttons {
+	display: inline-block;
+	vertical-align: bottom;
+}
+
+#podstable td div[data-column="view"] {
+	max-width: 20vw;
+	overflow: auto;
+}
+
+.allowed_ip {
+	font-size: 12px;
+	border-style: solid;
+	border-width: 2px;
+	height: 8px;
+}
+
+.button.add_current_ip {
+	height: 24px;
+	font-size: 10px;
+	padding-top: 5px;
+	margin-left: 3px;
+}
+
+#pod_type {
+	position: absolute;
+	bottom: 29px;
+	right: 12px;
+	width: fit-content;
+}
+
+#controls {
+	position: relative;
+}
+
+#controls #pod_type select {
+	height: 31px;
+	padding-top: 4px;
+}
+
+input.keep_ports[type="checkbox"] {
+	margin-bottom: 4px;
+}
