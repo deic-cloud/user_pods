@@ -15,7 +15,7 @@
 							<div class="icon-loading-dark"></div>
 						</div>
 						<div id="create">
-							<button id="pod-create" type="button" class="button primary"><?php p($l->t('New pod')); ?></button>
+							<button id="pod-create" type="button" class="button primary"><?php p($l->t('New container')); ?></button>
 						</div>
 					</div>
 				</div>
@@ -52,16 +52,16 @@
 				<div id="cvmfs"></div>
 				<div id="setup"></div>
 				<div id="file"><span id="file_text"><?php p($l->t('File')); ?>:</span>
-					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your pod')); ?>"
+					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your container')); ?>"
 						title="<?php p($l->t('Path of file in your ScienceData Home')); ?>">
 				</div>
 				<div id="peers"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
-					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your pod')); ?>"
+					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your container')); ?>"
 						title="<?php p($l->t('List of the form hostname1:ip1,hostname2:ip2,…')); ?>">
 				</div>
 			</div>
 		</div>
-		<h2 class="running_pods"><?php p($l->t('Running pods/containers')); ?>
+		<h2 class="running_pods"><?php p($l->t('Containers')); ?>
 			<a id="pods_refresh" class="button" title="<?php p($l->t('Refresh')); ?>">&circlearrowright;</a></h2>
 		<div id="running_pods">
 			<table id="podstable" class="panel">

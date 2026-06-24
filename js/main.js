@@ -204,7 +204,7 @@
 		str += '<td><div data-column="status"><span>' + esc(formatStatus(c.status)) + '</span></div></td>'
 		str += renderViewCell(c)
 		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Expand')) + '" class="expand-view permanent action icon icon-right-open"></a></td>'
-		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete pod')) + '" class="delete-pod permanent action icon icon-trash-empty"></a></td>'
+		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete container')) + '" class="delete-pod permanent action icon icon-trash-empty"></a></td>'
 		str += '</tr>'
 		str += expandedTable(c)
 		return str
@@ -308,10 +308,10 @@
 					runPodTimeouts.forEach(clearTimeout)
 					runPodTimeouts = [10000, 30000, 60000].map((ms) => setTimeout(getContainers, ms))
 				} else {
-					alertError(t(APP, 'run_pod: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
+					alertError(t(APP, 'Create container: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 				}
 			})
-			.catch((e) => alertError(t(APP, 'run_pod: Something went wrong. ') + e))
+			.catch((e) => alertError(t(APP, 'Create container: Something went wrong. ') + e))
 	}
 
 	function setAllowedIPs(podName, ips) {
@@ -350,12 +350,12 @@
 					$all('tr[data-pod-name="' + cssEscape(podName) + '"]').forEach((tr) => tr.remove())
 					updateContainerCount()
 				} else {
-					alertError(t(APP, 'delete_pod: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
+					alertError(t(APP, 'Delete container: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 					if (delLink) show(delLink, true)
 					setStatusText(podName, 'Delete failed')
 				}
 			})
-			.catch((e) => alertError(t(APP, 'delete_pod: Something went wrong. ') + e))
+			.catch((e) => alertError(t(APP, 'Delete container: Something went wrong. ') + e))
 	}
 
 	function setStatusText(podName, text) {
@@ -463,7 +463,7 @@
 		show($('#setup'), false)
 
 		if (d.pod_types && d.pod_types.length) {
-			let sel = '<select title="' + esc(t(APP, 'Pod type')) + '"><option value=""></option>'
+			let sel = '<select title="' + esc(t(APP, 'Container type')) + '"><option value=""></option>'
 			d.pod_types.forEach((pt) => { sel += '<option value="' + esc(pt) + '">' + esc(pt) + '</option>' })
 			sel += '</select>'
 			$all('#pod_type select').forEach((s) => s.remove())
@@ -504,13 +504,13 @@
 			if (d.cvmfs_repos) {
 				const el = $('#cvmfs')
 				el.innerHTML = '<span>' + esc(t(APP, 'CVMFS Repositories')) + ':</span> <input type="text" placeholder="'
-					+ esc(d.cvmfs_repos) + '" title="' + esc(t(APP, 'Comma-separated list of CVMFS repositories. Leave blank to use pod default.')) + '" />'
+					+ esc(d.cvmfs_repos) + '" title="' + esc(t(APP, 'Comma-separated list of CVMFS repositories. Leave blank to use container default.')) + '" />'
 				show(el, true)
 			}
 			if (d.setup_script) {
 				const el = $('#setup')
 				el.innerHTML = '<span>' + esc(t(APP, 'Setup script')) + ':</span> <input type="text" value="'
-					+ esc(d.setup_script) + '" title="' + esc(t(APP, 'Optional path to setup script to run in your pod.')) + '" />'
+					+ esc(d.setup_script) + '" title="' + esc(t(APP, 'Optional path to setup script to run in your container.')) + '" />'
 				show(el, true)
 			}
 		})
@@ -589,9 +589,9 @@
 				const podName = del.closest('tr').querySelector('div[data-column="pod_name"] span').textContent.trim()
 				const confirm = (OC.dialogs && OC.dialogs.confirm) ? OC.dialogs.confirm : null
 				if (confirm) {
-					confirm(t(APP, 'Are you sure you want to delete the pod') + ' ' + podName + '?',
+					confirm(t(APP, 'Are you sure you want to delete the container') + ' ' + podName + '?',
 						t(APP, 'Delete confirmation'), (ok) => { if (ok) deletePod(podName) })
-				} else if (window.confirm(t(APP, 'Delete pod') + ' ' + podName + '?')) {
+				} else if (window.confirm(t(APP, 'Delete container') + ' ' + podName + '?')) {
 					deletePod(podName)
 				}
 			}
