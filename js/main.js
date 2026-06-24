@@ -386,6 +386,24 @@
 		$('#pod-create').classList.toggle('primary')
 	}
 
+	// ---- list-header actions menu (the caret next to the "Containers" title) --
+
+	function togglePodsMenu() {
+		const menu = $('#pods-menu')
+		const btn = $('#pods-menu-toggle')
+		if (!menu) return
+		const open = menu.hidden
+		menu.hidden = !open
+		if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false')
+	}
+
+	function closePodsMenu() {
+		const menu = $('#pods-menu')
+		if (menu) menu.hidden = true
+		const btn = $('#pods-menu-toggle')
+		if (btn) btn.setAttribute('aria-expanded', 'false')
+	}
+
 	let currentManifestUrl = ''
 
 	function loadYaml(yamlFile) {
@@ -574,7 +592,12 @@
 		$('#yaml_file').selectedIndex = -1
 		$('#yaml_file').addEventListener('change', () => loadYaml())
 		$('#ok').addEventListener('click', (e) => { e.preventDefault(); onLaunch() })
-		$('#pods_refresh').addEventListener('click', () => getContainers())
+		$('#pods-menu-toggle').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); togglePodsMenu() })
+		$('#pods-reload').addEventListener('click', (e) => { e.preventDefault(); closePodsMenu(); getContainers() })
+		document.addEventListener('click', (e) => {
+			if (!$('#pods-menu') || $('#pods-menu').hidden) return
+			if (!e.target.closest('.pods-header-title')) closePodsMenu()
+		})
 		$('#save_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); localStorage.public_ssh_key = $('#public_key').value })
 		$('#load_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); $('#public_key').value = localStorage.public_ssh_key || '' })
 		$('#clear_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); localStorage.public_ssh_key = ''; $('#public_key').value = '' })

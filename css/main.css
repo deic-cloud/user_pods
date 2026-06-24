@@ -91,10 +91,6 @@
 	vertical-align: middle;
 }
 
-.text-right {
-	margin-right: 19px;
-}
-
 #ssh,
 #storage,
 #loading,
@@ -115,8 +111,110 @@
 	z-index: 10;
 }
 
-.running_pods {
-	padding-left: 1%;
+/* List header — "Containers" title + actions (Reload) menu + "New" button,
+   styled after the files app header. */
+.pods-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-height: 50px;
+	padding: 0 4px;
+	margin-bottom: 4px;
+}
+
+.pods-header-title {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	position: relative;
+}
+
+.pods-header-title h2 {
+	margin: 0;
+	padding: 0;
+	font-size: 20px;
+	line-height: 1.2;
+}
+
+.pods-menu-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	border-radius: var(--border-radius-large, 8px);
+	cursor: pointer;
+}
+
+.pods-menu-toggle:hover,
+.pods-menu-toggle[aria-expanded="true"] {
+	background: var(--color-background-hover);
+}
+
+.pods-caret {
+	width: 0;
+	height: 0;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid var(--color-main-text);
+}
+
+.pods-menu {
+	position: absolute;
+	top: calc(100% + 4px);
+	inset-inline-start: 0;
+	z-index: 100;
+	min-width: 168px;
+	padding: 4px;
+	background: var(--color-main-background);
+	border-radius: var(--border-radius-large, 8px);
+	box-shadow: 0 1px 5px var(--color-box-shadow, rgba(0, 0, 0, 0.2));
+}
+
+.pods-menu[hidden] {
+	display: none;
+}
+
+.pods-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 8px 12px;
+	border: none;
+	border-radius: var(--border-radius, 4px);
+	background: transparent;
+	color: var(--color-main-text);
+	font-size: var(--default-font-size);
+	text-align: left;
+	cursor: pointer;
+}
+
+.pods-menu-item:hover {
+	background: var(--color-background-hover);
+}
+
+.pods-menu-icon {
+	font-size: 18px;
+	line-height: 1;
+}
+
+.pods-new-plus {
+	font-size: 17px;
+	font-weight: bold;
+	margin-inline-end: 2px;
+}
+
+/* Column headers — match the files app list (muted, normal weight, left). */
+#podstable thead.panel-heading th.pods-col {
+	color: var(--color-text-maxcontrast);
+	font-weight: normal;
+	text-align: left;
+	user-select: none;
 }
 
 #running_pods {
@@ -158,12 +256,6 @@
 
 .app-user_pods .icon-loading-dark {
 	background-size: 16px;
-}
-
-#pods_refresh {
-	font-size: 24px;
-	margin-left: 8px;
-	height: 35px;
 }
 
 #podstable tbody a {

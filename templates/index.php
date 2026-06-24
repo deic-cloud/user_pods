@@ -6,19 +6,27 @@
 ?>
 <div id="app-content">
 	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p($_SERVER['REMOTE_ADDR'] ?? ''); ?>">
-		<div id="controls">
-			<div class="row">
-				<div class="text-right">
-					<div class="actions creatable">
-						<div id="loading">
-							<div id="loading-text"><?php p($l->t('Working…')); ?></div>
-							<div class="icon-loading-dark"></div>
-						</div>
-						<div id="create">
-							<button id="pod-create" type="button" class="button primary"><?php p($l->t('New container')); ?></button>
-						</div>
-					</div>
+		<div class="pods-header">
+			<div class="pods-header-title">
+				<h2><?php p($l->t('Containers')); ?></h2>
+				<button id="pods-menu-toggle" type="button" class="pods-menu-toggle"
+					aria-haspopup="true" aria-expanded="false" title="<?php p($l->t('Actions')); ?>">
+					<span class="pods-caret" aria-hidden="true"></span>
+				</button>
+				<div id="pods-menu" class="pods-menu" hidden role="menu">
+					<button id="pods-reload" type="button" class="pods-menu-item" role="menuitem">
+						<span class="pods-menu-icon" aria-hidden="true">&circlearrowright;</span><?php p($l->t('Reload')); ?>
+					</button>
 				</div>
+			</div>
+			<button id="pod-create" type="button" class="button primary pods-new-btn">
+				<span class="pods-new-plus" aria-hidden="true">+</span> <?php p($l->t('New')); ?>
+			</button>
+		</div>
+		<div id="controls">
+			<div id="loading">
+				<div id="loading-text"><?php p($l->t('Working…')); ?></div>
+				<div class="icon-loading-dark"></div>
 			</div>
 			<div id="newpod" class="apanel">
 				<span class="spanpanel">
@@ -61,17 +69,15 @@
 				</div>
 			</div>
 		</div>
-		<h2 class="running_pods"><?php p($l->t('Containers')); ?>
-			<a id="pods_refresh" class="button" title="<?php p($l->t('Refresh')); ?>">&circlearrowright;</a></h2>
 		<div id="running_pods">
 			<table id="podstable" class="panel">
 				<thead class="panel-heading">
-					<tr>
-						<th id="headerPodName"><span>pod_name</span></th>
-						<th id="headerPodStatus"><span>status</span></th>
-						<th id="headerPodView"><span>view</span></th>
-						<th id="headerPodMore" class="th-button"><span>more</span></th>
-						<th id="headerPodDelete" class="th-button"><span>delete</span></th>
+					<tr class="podstable-head">
+						<th id="headerPodName" class="pods-col"><span><?php p($l->t('Name')); ?></span></th>
+						<th id="headerPodStatus" class="pods-col"><span><?php p($l->t('Status')); ?></span></th>
+						<th id="headerPodView" class="pods-col"><span><?php p($l->t('View')); ?></span></th>
+						<th id="headerPodMore" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Actions')); ?></span></th>
+						<th id="headerPodDelete" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Delete')); ?></span></th>
 					</tr>
 				</thead>
 				<tbody id="fileList"></tbody>
