@@ -83,7 +83,7 @@
 				<tbody id="fileList"></tbody>
 				<tfoot>
 					<tr class="summary text-sm">
-						<td><span class="pods-count" data-containers="0"></span></td>
+						<td colspan="5"><span class="pods-count" data-containers="0"></span></td>
 					</tr>
 				</tfoot>
 			</table>
