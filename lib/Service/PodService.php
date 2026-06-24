@@ -50,6 +50,14 @@ class PodService {
 				'verify' => $verify,
 				'timeout' => 60,
 				'headers' => ['User-Agent' => 'ScienceData-user_pods'],
+				// The host service lives on a private management IP (privateIP,
+				// e.g. 10.0.0.12). NC's IClientService blocks local/private hosts
+				// as SSRF targets by default, which silently turns every pod call
+				// into an empty response. Opt this trusted endpoint back in per
+				// request rather than forcing admins to set the instance-wide
+				// allow_local_remote_servers. Harmless for the public GitHub
+				// manifest URLs (they are not local addresses).
+				'nextcloud' => ['allow_local_address' => true],
 			]);
 			return (string)$response->getBody();
 		} catch (\Throwable $e) {
