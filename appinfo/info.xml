@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>user_pods</id>
+	<name>Pods</name>
+	<summary>Create and manage Kubernetes pods — a root shell with trusted access to your data</summary>
+	<description>A web interface for creating and managing Kubernetes pods on ScienceData. Each pod gives the user a root shell on an ephemeral system with fast, trusted access to their data, and can be snapshotted into a reusable image. A thin UI over the ScienceData Kubernetes host service (sciencedata_kubernetes); pod manifests are served from a manifest library. Depends on files_sharding and user_group_admin.</description>
+	<version>0.2.0</version>
+	<licence>agpl</licence>
+	<author mail="fror@dtu.dk">Frederik Orellana, DTU</author>
+	<author>Ioanna Psylla</author>
+	<namespace>UserPods</namespace>
+	<bootstrap>OCA\UserPods\AppInfo\Application</bootstrap>
+	<category>tools</category>
+	<category>integration</category>
+	<website>https://github.com/deic-cloud/user_pods</website>
+	<bugs>https://github.com/deic-cloud/user_pods/issues</bugs>
+	<dependencies>
+		<nextcloud min-version="28" max-version="35"/>
+		<php min-version="8.2"/>
+	</dependencies>
+	<navigations>
+		<navigation>
+			<name>Pods</name>
+			<route>user_pods.page.index</route>
+			<icon>app.svg</icon>
+			<order>6</order>
+		</navigation>
+	</navigations>
+</info>
