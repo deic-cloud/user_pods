@@ -262,9 +262,31 @@
 	word-wrap: break-word;
 }
 
+/* SSH key: textarea on the left, Save/Load/Clear stacked top-aligned beside it
+   (no overlap, aligned with the top of the textarea). */
+#ssh {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+
 .key_buttons {
-	display: inline-block;
-	vertical-align: bottom;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 0 0 auto;
+}
+
+.key_buttons .btn-sg {
+	min-height: 0;
+	padding: 6px 14px;
+	text-align: center;
+}
+
+/* Placeholder shown in the create modal before an image is chosen. */
+#newpod-placeholder {
+	color: var(--color-text-maxcontrast);
+	padding: 24px 4px;
 }
 
 #podstable td div[data-column="view"] {

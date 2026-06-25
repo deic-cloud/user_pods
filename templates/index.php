@@ -50,6 +50,7 @@
 						<a class="button" href="#"><?php p($l->t('Cancel')); ?></a>
 					</div>
 				</span>
+				<p id="newpod-placeholder"><?php p($l->t('Choose an image from the drop-down')); ?></p>
 				<div id="newpod-spinner" class="icon-loading" hidden></div>
 				<div id="description" class="pods-hidden"></div>
 				<div id="ssh" class="pods-hidden">
@@ -57,9 +58,7 @@
 						title="<?php p($l->t('Paste your public SSH key here')); ?>"></textarea>
 					<div class="key_buttons">
 						<a id="save_ssh_public_key" class="button btn-sg" href="#" title="<?php p($l->t('Save SSH key to browser storage')); ?>"><?php p($l->t('Save')); ?></a>
-						<br />
 						<a id="load_ssh_public_key" class="button btn-sg" href="#" title="<?php p($l->t('Load SSH key from browser storage')); ?>"><?php p($l->t('Load')); ?></a>
-						<br />
 						<a id="clear_ssh_public_key" class="button btn-sg" href="#" title="<?php p($l->t('Clear stored SSH key')); ?>"><?php p($l->t('Clear')); ?></a>
 					</div>
 				</div>

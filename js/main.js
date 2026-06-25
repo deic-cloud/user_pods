@@ -398,6 +398,8 @@
 		const select = $('#yaml_file')
 		const value = yamlFile || select.value
 		if (!value) {
+			show($('#newpod-placeholder'), true)
+			show($('#description'), false)
 			show($('#storage'), false)
 			show($('#cvmfs'), false)
 			$all('#pod_type select').forEach((s) => s.remove())
@@ -407,6 +409,7 @@
 			show($('#ssh'), false)
 			return Promise.resolve()
 		}
+		show($('#newpod-placeholder'), false)
 		$('#description').innerHTML = ''
 		const spinner = $('#newpod-spinner')
 		if (spinner) spinner.hidden = false
@@ -613,18 +616,20 @@
 			}
 		})
 
-		loadManifests()
-		getContainers(() => {
+		// Honour a ?yaml_file=<name>[&file=<path>] deep link (e.g. from the
+		// external KubernetesImages page). Wait for the manifest list so the
+		// dropdown reflects the selection, then open the modal and load it.
+		loadManifests().then(() => {
 			const yamlFile = getParam('yaml_file')
-			if (yamlFile) {
-				const file = getParam('file')
-				openModal()
-				loadYaml(yamlFile).then(() => {
-					$('#yaml_file').value = yamlFile
-					if (file) $('#file_input').value = file
-				})
-			}
+			if (!yamlFile) return
+			const file = getParam('file')
+			$('#yaml_file').value = yamlFile
+			openModal()
+			loadYaml(yamlFile).then(() => {
+				if (file) $('#file_input').value = file
+			})
 		})
+		getContainers()
 	}
 
 	if (document.readyState === 'loading') {
