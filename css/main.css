@@ -279,9 +279,10 @@
 
 .key_buttons .btn-sg {
 	min-height: 0;
-	padding: 3px 12px;
+	padding: 3px 8px;
 	font-size: 13px;
 	text-align: center;
+	margin: 0;
 }
 
 /* Placeholder shown in the create modal before an image is chosen —

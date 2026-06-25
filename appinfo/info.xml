@@ -5,7 +5,7 @@
 	<name>Containers</name>
 	<summary>Create and manage containers — a root shell with trusted access to your data</summary>
 	<description>A web interface for creating and managing containers on ScienceData. Each container gives the user a root shell on an ephemeral system with fast, trusted access to their data, and can be snapshotted into a reusable image. A thin UI over the ScienceData Kubernetes host service (sciencedata_kubernetes); container templates are served from a manifest library. Depends on files_sharding and user_group_admin.</description>
-	<version>0.15.0</version>
+	<version>0.15.1</version>
 	<licence>agpl</licence>
 	<author mail="fror@dtu.dk">Frederik Orellana, DTU</author>
 	<author>Ioanna Psylla</author>
