@@ -8,6 +8,7 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCA\UserPods\Settings\AdminForm;
 
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'user_pods';
@@ -17,6 +18,7 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function register(IRegistrationContext $context): void {
+		$context->registerDeclarativeSettings(AdminForm::class);
 	}
 
 	public function boot(IBootContext $context): void {
