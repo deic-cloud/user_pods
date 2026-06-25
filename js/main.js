@@ -304,6 +304,7 @@
 		}, 'Creating pod…')
 			.then((json) => {
 				if (hostOk(json) && json.data && json.data.name) {
+					closeModal()
 					getContainers()
 					runPodTimeouts.forEach(clearTimeout)
 					runPodTimeouts = [10000, 30000, 60000].map((ms) => setTimeout(getContainers, ms))
@@ -380,10 +381,14 @@
 		}
 	}
 
-	function toggleNewpod() {
-		const np = $('#newpod')
-		np.style.display = (np.style.display === 'none' || np.style.display === '') ? 'block' : 'none'
-		$('#pod-create').classList.toggle('primary')
+	function openModal() {
+		const m = $('#pods-modal')
+		if (m) m.hidden = false
+	}
+
+	function closeModal() {
+		const m = $('#pods-modal')
+		if (m) m.hidden = true
 	}
 
 	let currentManifestUrl = ''
@@ -569,8 +574,13 @@
 		if (!root) return
 		clientIp = root.getAttribute('data-client-ip') || ''
 
-		$('#pod-create').addEventListener('click', (e) => { e.preventDefault(); toggleNewpod() })
-		$('#cancel').addEventListener('click', (e) => { e.preventDefault(); toggleNewpod() })
+		$('#pod-create').addEventListener('click', (e) => { e.preventDefault(); openModal() })
+		$('#cancel').addEventListener('click', (e) => { e.preventDefault(); closeModal() })
+		$all('#pods-modal [data-modal-close]').forEach((el) =>
+			el.addEventListener('click', (e) => { e.preventDefault(); closeModal() }))
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !$('#pods-modal').hidden) closeModal()
+		})
 		$('#yaml_file').selectedIndex = -1
 		$('#yaml_file').addEventListener('change', () => loadYaml())
 		$('#ok').addEventListener('click', (e) => { e.preventDefault(); onLaunch() })
@@ -602,8 +612,7 @@
 			const yamlFile = getParam('yaml_file')
 			if (yamlFile) {
 				const file = getParam('file')
-				show($('#newpod'), true)
-				$('#pod-create').classList.remove('primary')
+				openModal()
 				loadYaml(yamlFile).then(() => {
 					$('#yaml_file').value = yamlFile
 					if (file) $('#file_input').value = file

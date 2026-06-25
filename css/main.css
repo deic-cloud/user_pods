@@ -191,6 +191,9 @@
 
 #newpod {
 	padding-bottom: 6px;
+	/* positioning context for #pod_type (absolute, bottom-right) now that the
+	   form lives in the modal rather than #controls */
+	position: relative;
 }
 
 /* Footer container count — match the files app's list footer
@@ -286,13 +289,63 @@
 	width: fit-content;
 }
 
-#controls {
-	position: relative;
-}
-
-#controls #pod_type select {
+#pod_type select {
 	height: 31px;
 	padding-top: 4px;
+}
+
+/* "New container" modal (replaces the old inline roll-down panel). */
+.pods-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.pods-modal[hidden] {
+	display: none;
+}
+
+.pods-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+}
+
+.pods-modal-dialog {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	width: 640px;
+	max-width: calc(100vw - 32px);
+	max-height: calc(100vh - 64px);
+	background: var(--color-main-background);
+	border-radius: var(--border-radius-large, 8px);
+	box-shadow: 0 0 30px var(--color-box-shadow, rgba(0, 0, 0, 0.4));
+	overflow: hidden;
+}
+
+.pods-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 8px 10px 16px;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.pods-modal-header h2 {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.2;
+}
+
+.pods-modal-body {
+	padding: 16px;
+	overflow: auto;
 }
 
 input.keep_ports[type="checkbox"] {

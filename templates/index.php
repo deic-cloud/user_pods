@@ -18,12 +18,24 @@
 				<span class="pods-new-plus" aria-hidden="true">+</span> <?php p($l->t('New')); ?>
 			</button>
 		</div>
-		<div id="controls">
-			<div id="loading">
-				<div id="loading-text"><?php p($l->t('Working…')); ?></div>
-				<div class="icon-loading-dark"></div>
-			</div>
-			<div id="newpod" class="apanel">
+		<div id="loading">
+			<div id="loading-text"><?php p($l->t('Working…')); ?></div>
+			<div class="icon-loading-dark"></div>
+		</div>
+		<div id="pods-modal" class="pods-modal" hidden>
+			<div class="pods-modal-backdrop" data-modal-close></div>
+			<div class="pods-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pods-modal-title">
+				<div class="pods-modal-header">
+					<h2 id="pods-modal-title"><?php p($l->t('New container')); ?></h2>
+					<button type="button" class="pods-icon-btn pods-modal-close" data-modal-close
+						title="<?php p($l->t('Close')); ?>" aria-label="<?php p($l->t('Close')); ?>">
+						<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+							<path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+						</svg>
+					</button>
+				</div>
+				<div class="pods-modal-body">
+					<div id="newpod">
 				<span class="spanpanel">
 					<select id="yaml_file" title="<?php p($l->t('YAML file')); ?>">
 						<option value=""></option>
@@ -61,6 +73,8 @@
 				<div id="peers"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
 					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your container')); ?>"
 						title="<?php p($l->t('List of the form hostname1:ip1,hostname2:ip2,…')); ?>">
+				</div>
+					</div>
 				</div>
 			</div>
 		</div>
