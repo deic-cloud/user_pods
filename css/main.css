@@ -216,13 +216,38 @@
 	margin-left: 0;
 }
 
-#podstable .delete-pod,
-#podstable .expand-view {
+/* Row action icons (details / logs / delete) — inline SVGs, themed.
+   (Replaces OC7 fontello classes that no longer have a font, so the buttons
+   were invisible.) */
+#podstable .pod-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: var(--border-radius, 4px);
+	color: var(--color-text-maxcontrast);
 	text-decoration: none;
-	color: var(--color-text-maxcontrast, #c5c5c5);
-	font-size: 16px;
-	background-image: none;
-	padding: 0 5px;
+}
+
+#podstable .pod-action:hover,
+#podstable .pod-action:focus {
+	color: var(--color-main-text);
+	background-color: var(--color-background-hover);
+}
+
+#podstable .pod-action svg {
+	display: block;
+	width: 18px;
+	height: 18px;
+}
+
+#podstable .expand-view svg {
+	transition: transform 0.1s ease-in-out;
+}
+
+#podstable .expand-view.expanded svg {
+	transform: rotate(90deg);
 }
 
 .app-user_pods .icon-loading-dark {

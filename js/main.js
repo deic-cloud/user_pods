@@ -190,7 +190,7 @@
 		}
 
 		return '<tr hidden class="expanded-row" data-pod-name="' + esc(c.pod_name) + '" data-https-port="' + esc(httpsPort)
-			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="5">'
+			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="6">'
 			+ '<table class="panel expanded-table">' + rows + '</table></td></tr>'
 	}
 
@@ -203,8 +203,12 @@
 		str += '<td><div data-column="pod_name"><span>' + esc(c.pod_name) + '</span></div></td>'
 		str += '<td><div data-column="status"><span>' + esc(formatStatus(c.status)) + '</span></div></td>'
 		str += renderViewCell(c)
-		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Expand')) + '" class="expand-view permanent action icon icon-right-open"></a></td>'
-		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete container')) + '" class="delete-pod permanent action icon icon-trash-empty"></a></td>'
+		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Details')) + '" class="expand-view pod-action">'
+			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z" /></svg></a></td>'
+		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Download logs')) + '" class="pod-logs pod-action">'
+			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z" /></svg></a></td>'
+		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete container')) + '" class="delete-pod pod-action">'
+			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" /></svg></a></td>'
 		str += '</tr>'
 		str += expandedTable(c)
 		return str
@@ -263,7 +267,7 @@
 					alertError(t(APP, 'get_containers: ') + (hostMessage(data) || t(APP, 'Something went wrong…')))
 					return
 				}
-				const expandedNames = $all('#podstable #fileList tr.simple-row .expand-view.icon-down-open')
+				const expandedNames = $all('#podstable #fileList tr.simple-row .expand-view.expanded')
 					.map((a) => a.closest('tr').getAttribute('data-pod-name'))
 				const body = $('#fileList')
 				body.innerHTML = ''
@@ -370,15 +374,9 @@
 		if (!expander) return
 		const tr = expander.closest('tr')
 		const next = tr.nextElementSibling
-		if (expander.className.indexOf('icon-down-open') === -1) {
-			if (next) next.hidden = false
-			expander.classList.remove('icon-right-open')
-			expander.classList.add('icon-down-open')
-		} else {
-			if (next) next.hidden = true
-			expander.classList.remove('icon-down-open')
-			expander.classList.add('icon-right-open')
-		}
+		const isExpanded = expander.classList.contains('expanded')
+		if (next) next.hidden = isExpanded
+		expander.classList.toggle('expanded', !isExpanded)
 	}
 
 	function openModal() {
@@ -602,6 +600,13 @@
 		$('#podstable').addEventListener('click', (e) => {
 			const expand = e.target.closest('.expand-view')
 			if (expand) { e.preventDefault(); toggleExpanded(expand); return }
+			const logs = e.target.closest('.pod-logs')
+			if (logs) {
+				e.preventDefault()
+				const podName = logs.closest('tr').querySelector('div[data-column="pod_name"] span').textContent.trim()
+				window.location.href = url('api/pod/logs?pod=' + encodeURIComponent(podName))
+				return
+			}
 			const del = e.target.closest('.delete-pod')
 			if (del) {
 				e.preventDefault()
