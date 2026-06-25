@@ -43,15 +43,16 @@
 				</span>
 				<span id="links"></span>
 				<span class="newpod-span">
-					<div id="ok" class="btn-pod">
+					<div id="ok" class="btn-pod pods-hidden">
 						<a class="button" href="#"><?php p($l->t('Launch')); ?></a>
 					</div>
-					<div id="cancel" class="btn-pod">
+					<div id="cancel" class="btn-pod pods-hidden">
 						<a class="button" href="#"><?php p($l->t('Cancel')); ?></a>
 					</div>
 				</span>
-				<div id="description"></div>
-				<div id="ssh">
+				<div id="newpod-spinner" class="icon-loading" hidden></div>
+				<div id="description" class="pods-hidden"></div>
+				<div id="ssh" class="pods-hidden">
 					<textarea id="public_key" placeholder="<?php p($l->t('Public SSH key')); ?>"
 						title="<?php p($l->t('Paste your public SSH key here')); ?>"></textarea>
 					<div class="key_buttons">
@@ -62,15 +63,15 @@
 						<a id="clear_ssh_public_key" class="button btn-sg" href="#" title="<?php p($l->t('Clear stored SSH key')); ?>"><?php p($l->t('Clear')); ?></a>
 					</div>
 				</div>
-				<div id="pod_type"><label><?php p($l->t('Instance type:')); ?></label></div>
-				<div id="storage"></div>
-				<div id="cvmfs"></div>
-				<div id="setup"></div>
-				<div id="file"><span id="file_text"><?php p($l->t('File')); ?>:</span>
+				<div id="pod_type" class="pods-hidden"><label><?php p($l->t('Instance type:')); ?></label></div>
+				<div id="storage" class="pods-hidden"></div>
+				<div id="cvmfs" class="pods-hidden"></div>
+				<div id="setup" class="pods-hidden"></div>
+				<div id="file" class="pods-hidden"><span id="file_text"><?php p($l->t('File')); ?>:</span>
 					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your container')); ?>"
 						title="<?php p($l->t('Path of file in your ScienceData Home')); ?>">
 				</div>
-				<div id="peers"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
+				<div id="peers" class="pods-hidden"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
 					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your container')); ?>"
 						title="<?php p($l->t('List of the form hostname1:ip1,hostname2:ip2,…')); ?>">
 				</div>

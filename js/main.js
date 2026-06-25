@@ -44,7 +44,7 @@
 
 	function show(el, on) {
 		if (!el) return
-		el.style.display = on === false ? 'none' : ''
+		el.classList.toggle('pods-hidden', on === false)
 	}
 
 	function alertError(msg) {
@@ -407,6 +407,9 @@
 			show($('#ssh'), false)
 			return Promise.resolve()
 		}
+		$('#description').innerHTML = ''
+		const spinner = $('#newpod-spinner')
+		if (spinner) spinner.hidden = false
 		return apiGet('api/manifest?yaml=' + encodeURIComponent(value), 'Retrieving YAML…')
 			.then((d) => {
 				// checkManifest returns [] (empty array) when not allowed.
@@ -458,12 +461,14 @@
 				buildMountInputs(d)
 			})
 			.catch((e) => alertError(t(APP, 'check_manifest: Something went wrong. ') + e))
+			.finally(() => { if (spinner) spinner.hidden = true })
 	}
 
 	function buildMountInputs(d) {
 		show($('#storage'), false)
 		show($('#cvmfs'), false)
 		show($('#pod_type'), false)
+		$all('#pod_type select').forEach((s) => s.remove())
 		$all('#setup input').forEach((i) => { i.value = '' })
 		show($('#setup'), false)
 
