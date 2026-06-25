@@ -57,32 +57,46 @@
 
 	// Minimal, safe markdown -> HTML for the manifest .md description.
 	function renderMarkdown(md) {
-		const lines = esc(md || '').split('\n')
+		const lines = String(md || '').split('\n')
 		let html = ''
 		let inList = false
-		const inline = (s) => s
+		let inCode = false
+		let codeBuf = []
+		// inline() escapes first, then applies markup — so the output is always
+		// safe (no raw HTML from the .md can slip through). Handles code spans,
+		// bold, *italic* and _italic_, and links (http(s), site-relative /…, #…).
+		const inline = (s) => esc(s)
 			.replace(/`([^`]+)`/g, '<code>$1</code>')
 			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 			.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
-			.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>')
-		for (let line of lines) {
+			.replace(/(^|[^\w`])_([^_]+)_(?=[^\w`]|$)/g, '$1<em>$2</em>')
+			.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*|#[^)\s]*)\)/g,
+				'<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>')
+		const closeList = () => { if (inList) { html += '</ul>'; inList = false } }
+		for (const line of lines) {
+			if (/^\s*```/.test(line)) {
+				if (!inCode) { closeList(); inCode = true; codeBuf = [] } else { html += '<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>'; inCode = false }
+				continue
+			}
+			if (inCode) { codeBuf.push(line); continue }
 			const h = line.match(/^(#{1,6})\s+(.*)$/)
 			const li = line.match(/^\s*[-*]\s+(.*)$/)
 			if (h) {
-				if (inList) { html += '</ul>'; inList = false }
+				closeList()
 				const level = h[1].length
 				html += '<h' + level + '>' + inline(h[2]) + '</h' + level + '>'
 			} else if (li) {
 				if (!inList) { html += '<ul>'; inList = true }
 				html += '<li>' + inline(li[1]) + '</li>'
 			} else if (line.trim() === '') {
-				if (inList) { html += '</ul>'; inList = false }
+				closeList()
 			} else {
-				if (inList) { html += '</ul>'; inList = false }
+				closeList()
 				html += '<p>' + inline(line) + '</p>'
 			}
 		}
-		if (inList) html += '</ul>'
+		if (inCode) { html += '<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>' }
+		closeList()
 		return html
 	}
 

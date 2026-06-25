@@ -77,6 +77,31 @@
 	margin: 8px 0 4px;
 }
 
+#description a {
+	text-decoration: underline;
+}
+
+#description pre {
+	margin: 8px 0;
+	padding: 8px 10px;
+	background: var(--color-background-dark);
+	border-radius: var(--border-radius, 4px);
+	overflow-x: auto;
+}
+
+#description pre code {
+	display: block;
+	white-space: pre;
+	font-family: monospace;
+}
+
+#description :not(pre) > code {
+	padding: 1px 4px;
+	background: var(--color-background-dark);
+	border-radius: var(--border-radius, 4px);
+	font-family: monospace;
+}
+
 #yaml_file {
 	line-height: 1.5;
 	padding: 2px 0 4px 5px;
