@@ -314,6 +314,36 @@
 	height: 16px;
 }
 
+/* Logs icon lives next to the status (a status/diagnostic thing, away from delete). */
+#podstable td div[data-column="status"] {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+#podstable .pod-status-logs {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--border-radius, 4px);
+	color: var(--color-text-maxcontrast);
+	text-decoration: none;
+}
+
+#podstable .pod-status-logs:hover {
+	color: var(--color-main-text);
+	background-color: var(--color-background-hover);
+}
+
+#podstable .pod-status-logs svg {
+	display: block;
+	width: 16px;
+	height: 16px;
+}
+
 .app-user_pods .icon-loading-dark {
 	background-size: 16px;
 }
@@ -335,6 +365,9 @@
 
 /* Gap between the SSH URL and the allowed-IPs input next to it. */
 #podstable .expanded-row-ssh-ip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	margin-inline-start: 16px;
 }
 
@@ -425,10 +458,13 @@
 }
 
 .button.add_current_ip {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	height: 24px;
+	padding: 0 8px;
 	font-size: 10px;
-	padding-top: 5px;
-	margin-left: 3px;
+	margin: 0;
 }
 
 #pod_type {

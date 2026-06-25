@@ -111,14 +111,13 @@
 						<th id="headerPodName" class="pods-col"><span><?php p($l->t('Name')); ?></span></th>
 						<th id="headerPodStatus" class="pods-col"><span><?php p($l->t('Status')); ?></span></th>
 						<th id="headerPodView" class="pods-col"><span><?php p($l->t('View')); ?></span></th>
-						<th id="headerPodLogs" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Logs')); ?></span></th>
 						<th id="headerPodDelete" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Delete')); ?></span></th>
 					</tr>
 				</thead>
 				<tbody id="fileList"></tbody>
 				<tfoot>
 					<tr class="summary text-sm">
-						<td colspan="5"><span class="pods-count" data-containers="0"></span></td>
+						<td colspan="4"><span class="pods-count" data-containers="0"></span></td>
 					</tr>
 				</tfoot>
 			</table>

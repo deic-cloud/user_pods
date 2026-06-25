@@ -204,7 +204,7 @@
 		}
 
 		return '<tr hidden class="expanded-row" data-pod-name="' + esc(c.pod_name) + '" data-https-port="' + esc(httpsPort)
-			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="5">'
+			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="4">'
 			+ '<table class="panel expanded-table">' + rows + '</table></td></tr>'
 	}
 
@@ -217,10 +217,10 @@
 		str += '<td><div data-column="pod_name"><a href="#" title="' + esc(t(APP, 'Details')) + '" class="expand-view pod-row-toggle">'
 			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z" /></svg></a>'
 			+ '<span class="pod-name">' + esc(c.pod_name) + '</span></div></td>'
-		str += '<td><div data-column="status"><span>' + esc(formatStatus(c.status)) + '</span></div></td>'
+		str += '<td><div data-column="status"><span>' + esc(formatStatus(c.status)) + '</span>'
+			+ '<a href="#" title="' + esc(t(APP, 'Logs')) + '" class="pod-logs pod-status-logs">'
+			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z" /></svg></a></div></td>'
 		str += renderViewCell(c)
-		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Download logs')) + '" class="pod-logs pod-action">'
-			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z" /></svg></a></td>'
 		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete container')) + '" class="delete-pod pod-action">'
 			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" /></svg></a></td>'
 		str += '</tr>'
