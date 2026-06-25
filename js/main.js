@@ -431,6 +431,7 @@
 					'https://github.com/deic-dk/pod_manifests/blob/main/')
 				$('#links').innerHTML = '<span><a href="' + esc(ghUrl) + '" target="_blank" rel="noreferrer noopener">YAML source</a></span>'
 				$('#description').innerHTML = renderMarkdown(d.manifest_info)
+				show($('#description'), true)
 
 				show($('#ssh'), d.pod_accepts_public_key === true)
 
