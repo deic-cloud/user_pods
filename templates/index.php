@@ -8,14 +8,14 @@
 	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p($_SERVER['REMOTE_ADDR'] ?? ''); ?>">
 		<div class="pods-header">
 			<h2 class="pods-title"><?php p($l->t('Containers')); ?></h2>
+			<button id="pod-create" type="button" class="button primary pods-new-btn">
+				<span class="pods-new-plus" aria-hidden="true">+</span> <?php p($l->t('New')); ?>
+			</button>
 			<button id="pods-reload" type="button" class="pods-icon-btn"
 				title="<?php p($l->t('Reload')); ?>" aria-label="<?php p($l->t('Reload')); ?>">
 				<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
 					<path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12S7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12S8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" />
 				</svg>
-			</button>
-			<button id="pod-create" type="button" class="button primary pods-new-btn">
-				<span class="pods-new-plus" aria-hidden="true">+</span> <?php p($l->t('New')); ?>
 			</button>
 		</div>
 		<div id="loading">
@@ -90,7 +90,6 @@
 						<th id="headerPodName" class="pods-col"><span><?php p($l->t('Name')); ?></span></th>
 						<th id="headerPodStatus" class="pods-col"><span><?php p($l->t('Status')); ?></span></th>
 						<th id="headerPodView" class="pods-col"><span><?php p($l->t('View')); ?></span></th>
-						<th id="headerPodMore" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Details')); ?></span></th>
 						<th id="headerPodLogs" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Logs')); ?></span></th>
 						<th id="headerPodDelete" class="pods-col th-button"><span class="hidden-visually"><?php p($l->t('Delete')); ?></span></th>
 					</tr>
@@ -98,7 +97,7 @@
 				<tbody id="fileList"></tbody>
 				<tfoot>
 					<tr class="summary text-sm">
-						<td colspan="6"><span class="pods-count" data-containers="0"></span></td>
+						<td colspan="5"><span class="pods-count" data-containers="0"></span></td>
 					</tr>
 				</tfoot>
 			</table>

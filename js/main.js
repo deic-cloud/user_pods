@@ -204,7 +204,7 @@
 		}
 
 		return '<tr hidden class="expanded-row" data-pod-name="' + esc(c.pod_name) + '" data-https-port="' + esc(httpsPort)
-			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="6">'
+			+ '" data-ssh-port="' + esc(sshPort) + '" data-extra-ports="' + esc(extraPorts) + '"><td colspan="5">'
 			+ '<table class="panel expanded-table">' + rows + '</table></td></tr>'
 	}
 
@@ -214,11 +214,11 @@
 		let str = '<tr class="simple-row" data-pod-name="' + esc(c.pod_name) + '" data-pod-ip="' + esc(c.pod_ip || '')
 			+ '" data-image-name="' + esc(c.image_name || '') + '" data-https-port="' + esc(httpsPort) + '" data-ssh-port="' + esc(sshPort)
 			+ '" data-extra-ports="' + esc(c.extra_ports || '') + '">'
-		str += '<td><div data-column="pod_name"><span>' + esc(c.pod_name) + '</span></div></td>'
+		str += '<td><div data-column="pod_name"><a href="#" title="' + esc(t(APP, 'Details')) + '" class="expand-view pod-row-toggle">'
+			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z" /></svg></a>'
+			+ '<span class="pod-name">' + esc(c.pod_name) + '</span></div></td>'
 		str += '<td><div data-column="status"><span>' + esc(formatStatus(c.status)) + '</span></div></td>'
 		str += renderViewCell(c)
-		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Details')) + '" class="expand-view pod-action">'
-			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.59,16.59L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.59Z" /></svg></a></td>'
 		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Download logs')) + '" class="pod-logs pod-action">'
 			+ '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6,2A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z" /></svg></a></td>'
 		str += '<td class="td-button"><a href="#" title="' + esc(t(APP, 'Delete container')) + '" class="delete-pod pod-action">'

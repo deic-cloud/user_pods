@@ -275,6 +275,36 @@
 	transform: rotate(90deg);
 }
 
+/* Details toggle sits next to the (bold) pod name. */
+#podstable .pod-name {
+	font-weight: bold;
+	vertical-align: middle;
+}
+
+#podstable .pod-row-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	width: 24px;
+	height: 24px;
+	margin-inline-end: 4px;
+	border-radius: var(--border-radius, 4px);
+	color: var(--color-text-maxcontrast);
+	text-decoration: none;
+}
+
+#podstable .pod-row-toggle:hover {
+	color: var(--color-main-text);
+	background-color: var(--color-background-hover);
+}
+
+#podstable .pod-row-toggle svg {
+	display: block;
+	width: 16px;
+	height: 16px;
+}
+
 .app-user_pods .icon-loading-dark {
 	background-size: 16px;
 }
@@ -291,6 +321,7 @@
 	text-align: right;
 	width: 0;
 	white-space: nowrap;
+	padding-inline-end: 10px;
 }
 
 #podstable .expanded-table {
