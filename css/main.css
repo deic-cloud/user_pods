@@ -157,6 +157,16 @@
 	color: var(--color-main-text);
 }
 
+/* display:block kills the inline-SVG baseline gap that left a sliver of space
+   under the glyph, throwing it out of line with the title text. */
+.pods-header .pods-icon-btn svg {
+	display: block;
+}
+
+.pods-new-btn {
+	margin-inline-start: 12px;
+}
+
 .pods-new-plus {
 	font-size: 17px;
 	font-weight: bold;
