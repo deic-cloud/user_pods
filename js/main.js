@@ -273,7 +273,7 @@
 	}
 
 	function getContainers(callback) {
-		apiGet('api/containers', 'Retrieving table data…')
+		return apiGet('api/containers', 'Retrieving table data…')
 			.then((data) => {
 				if (!Array.isArray(data)) {
 					// A non-array response is an error body {status:'error',data:{message}}
@@ -401,6 +401,25 @@
 	function closeModal() {
 		const m = $('#pods-modal')
 		if (m) m.hidden = true
+	}
+
+	// ---- pod logs (inline viewer) ----------------------------------------
+
+	function openLogs(podName) {
+		const modal = $('#pods-logs-modal')
+		if (!modal) return
+		const logsUrl = url('api/pod/logs?pod=' + encodeURIComponent(podName))
+		$('#pods-logs-title').textContent = t(APP, 'Logs') + ': ' + podName
+		$('#pods-logs-download').setAttribute('href', logsUrl)
+		$('#pods-logs-content').textContent = ''
+		const spinner = $('#pods-logs-spinner')
+		if (spinner) spinner.hidden = false
+		modal.hidden = false
+		fetch(logsUrl, { headers: { 'OCS-APIRequest': 'true', requesttoken: OC.requestToken } })
+			.then((r) => r.text())
+			.then((text) => { $('#pods-logs-content').textContent = text || t(APP, '(no log output)') })
+			.catch((e) => { $('#pods-logs-content').textContent = t(APP, 'Could not load logs. ') + e })
+			.finally(() => { if (spinner) spinner.hidden = true })
 	}
 
 	let currentManifestUrl = ''
@@ -597,15 +616,20 @@
 
 		$('#pod-create').addEventListener('click', (e) => { e.preventDefault(); openModal() })
 		$('#cancel').addEventListener('click', (e) => { e.preventDefault(); closeModal() })
-		$all('#pods-modal [data-modal-close]').forEach((el) =>
-			el.addEventListener('click', (e) => { e.preventDefault(); closeModal() }))
+		$all('.pods-modal [data-modal-close]').forEach((el) =>
+			el.addEventListener('click', (e) => { e.preventDefault(); const m = el.closest('.pods-modal'); if (m) m.hidden = true }))
 		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && !$('#pods-modal').hidden) closeModal()
+			if (e.key === 'Escape') $all('.pods-modal').forEach((m) => { m.hidden = true })
 		})
 		$('#yaml_file').selectedIndex = -1
 		$('#yaml_file').addEventListener('change', () => loadYaml())
 		$('#ok').addEventListener('click', (e) => { e.preventDefault(); onLaunch() })
-		$('#pods-reload').addEventListener('click', (e) => { e.preventDefault(); getContainers() })
+		$('#pods-reload').addEventListener('click', (e) => {
+			e.preventDefault()
+			const btn = $('#pods-reload')
+			btn.classList.add('loading')
+			getContainers().finally(() => btn.classList.remove('loading'))
+		})
 		$('#save_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); localStorage.public_ssh_key = $('#public_key').value })
 		$('#load_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); $('#public_key').value = localStorage.public_ssh_key || '' })
 		$('#clear_ssh_public_key').addEventListener('click', (e) => { e.preventDefault(); localStorage.public_ssh_key = ''; $('#public_key').value = '' })
@@ -618,7 +642,7 @@
 			if (logs) {
 				e.preventDefault()
 				const podName = logs.closest('tr').querySelector('div[data-column="pod_name"] span').textContent.trim()
-				window.location.href = url('api/pod/logs?pod=' + encodeURIComponent(podName))
+				openLogs(podName)
 				return
 			}
 			const del = e.target.closest('.delete-pod')

@@ -192,6 +192,15 @@
 	margin-top: 6px;
 }
 
+/* Spin the reload icon while a refresh is in flight (click feedback). */
+#pods-reload.loading svg {
+	animation: pods-spin 0.8s linear infinite;
+}
+
+@keyframes pods-spin {
+	to { transform: rotate(360deg); }
+}
+
 .pods-new-btn {
 	margin-inline-start: 12px;
 }
@@ -322,6 +331,11 @@
 	width: 0;
 	white-space: nowrap;
 	padding-inline-end: 10px;
+}
+
+/* Gap between the SSH URL and the allowed-IPs input next to it. */
+#podstable .expanded-row-ssh-ip {
+	margin-inline-start: 16px;
 }
 
 #podstable .expanded-table {
@@ -487,6 +501,26 @@
 	padding: 16px;
 	overflow: auto;
 	flex: 1 1 auto;
+}
+
+/* Logs modal: header Download + close on the right; log text in a mono pre. */
+.pods-logs-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+#pods-logs-spinner {
+	position: relative;
+	min-height: 60px;
+}
+
+#pods-logs-content {
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-family: monospace;
+	font-size: var(--default-font-size);
 }
 
 /* Make the "YAML source" link read as a link. */
