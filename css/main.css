@@ -279,14 +279,41 @@
 
 .key_buttons .btn-sg {
 	min-height: 0;
-	padding: 6px 14px;
+	padding: 3px 12px;
+	font-size: 13px;
 	text-align: center;
 }
 
-/* Placeholder shown in the create modal before an image is chosen. */
+/* Placeholder shown in the create modal before an image is chosen —
+   styled like the files app "No file in here" empty state. */
 #newpod-placeholder {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 16px;
 	color: var(--color-text-maxcontrast);
-	padding: 24px 4px;
+}
+
+.newpod-placeholder-icon {
+	width: 64px;
+	height: 64px;
+	margin-bottom: 12px;
+	opacity: 0.4;
+}
+
+.newpod-placeholder-icon svg {
+	display: block;
+	width: 64px;
+	height: 64px;
+}
+
+.newpod-placeholder-text {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 30px;
+	text-align: center;
 }
 
 #podstable td div[data-column="view"] {
@@ -313,6 +340,10 @@
 	bottom: 29px;
 	right: 12px;
 	width: fit-content;
+}
+
+#pod_type label {
+	margin-right: 8px;
 }
 
 #pod_type select {
