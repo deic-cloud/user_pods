@@ -148,6 +148,7 @@
 	background: transparent;
 	border-radius: var(--border-radius-large, 8px);
 	cursor: pointer;
+	color: var(--color-main-text);
 }
 
 .pods-menu-toggle:hover,
@@ -155,12 +156,15 @@
 	background: var(--color-background-hover);
 }
 
+/* Down chevron after the title, flips to up when the menu is open
+   (matches the files app view-title menu). Colour follows the theme
+   via currentColor on the toggle (white on dark, black on light). */
 .pods-caret {
-	width: 0;
-	height: 0;
-	border-left: 5px solid transparent;
-	border-right: 5px solid transparent;
-	border-top: 6px solid var(--color-main-text);
+	transition: transform 0.1s ease-in-out;
+}
+
+.pods-menu-toggle[aria-expanded="true"] .pods-caret {
+	transform: rotate(180deg);
 }
 
 .pods-menu {

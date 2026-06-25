@@ -11,7 +11,9 @@
 				<h2><?php p($l->t('Containers')); ?></h2>
 				<button id="pods-menu-toggle" type="button" class="pods-menu-toggle"
 					aria-haspopup="true" aria-expanded="false" title="<?php p($l->t('Actions')); ?>">
-					<span class="pods-caret" aria-hidden="true"></span>
+					<svg class="pods-caret" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+						<path fill="currentColor" d="M7.41,8.58 12,13.17 16.59,8.58 18,10 12,16 6,10 Z" />
+					</svg>
 				</button>
 				<div id="pods-menu" class="pods-menu" hidden role="menu">
 					<button id="pods-reload" type="button" class="pods-menu-item" role="menuitem">
