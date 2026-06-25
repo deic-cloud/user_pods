@@ -123,93 +123,38 @@
 	margin-bottom: 4px;
 }
 
-.pods-header-title {
-	display: flex;
-	align-items: center;
-	gap: 2px;
-	position: relative;
-}
-
-.pods-header-title h2 {
+.pods-title {
 	margin: 0;
 	padding: 0;
 	font-size: 20px;
 	line-height: 1.2;
 }
 
-.pods-menu-toggle {
+/* Flat/tertiary reload icon button next to the title. The high-specificity
+   selector is needed to beat NC core's bare-button styling
+   (button:not(.button-vue,…) sets a blue-grey background, primary-tinted text
+   and width:130px — that's what made it look like a wrong-coloured wide button). */
+.pods-header .pods-icon-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 34px;
-	height: 34px;
+	width: var(--default-clickable-area, 44px);
+	min-width: var(--default-clickable-area, 44px);
+	height: var(--default-clickable-area, 44px);
+	min-height: var(--default-clickable-area, 44px);
 	padding: 0;
 	border: none;
-	background: transparent;
-	border-radius: var(--border-radius-large, 8px);
-	cursor: pointer;
+	background-color: transparent;
 	color: var(--color-main-text);
-}
-
-.pods-menu-toggle:hover,
-.pods-menu-toggle[aria-expanded="true"] {
-	background: var(--color-background-hover);
-}
-
-/* Down chevron after the title, flips to up when the menu is open
-   (matches the files app view-title menu). Colour follows the theme
-   via currentColor on the toggle (white on dark, black on light). */
-.pods-caret {
-	transition: transform 0.1s ease-in-out;
-}
-
-.pods-menu-toggle[aria-expanded="true"] .pods-caret {
-	transform: rotate(180deg);
-}
-
-.pods-menu {
-	position: absolute;
-	top: calc(100% + 4px);
-	inset-inline-start: 0;
-	z-index: 100;
-	min-width: 200px;
-	padding: 4px;
-	background: var(--color-main-background);
-	border-radius: var(--border-radius-large, 8px);
-	box-shadow: 0 1px 10px var(--color-box-shadow, rgba(0, 0, 0, 0.2));
-}
-
-.pods-menu[hidden] {
-	display: none;
-}
-
-.pods-menu-item {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	width: 100%;
-	min-height: var(--default-clickable-area, 44px);
-	padding: 0 14px;
-	border: none;
-	border-radius: var(--border-radius-large, 8px);
-	background: transparent;
-	color: var(--color-main-text);
-	font-size: var(--default-font-size);
-	text-align: left;
+	border-radius: var(--border-radius-element, var(--border-radius-large, 8px));
 	cursor: pointer;
 }
 
-.pods-menu-item:hover {
-	background: var(--color-background-hover);
-}
-
-.pods-menu-icon {
-	display: inline-flex;
-	justify-content: center;
-	width: 20px;
-	font-size: 20px;
-	line-height: 1;
-	opacity: .7;
+.pods-header .pods-icon-btn:hover,
+.pods-header .pods-icon-btn:focus,
+.pods-header .pods-icon-btn:active {
+	background-color: var(--color-background-hover);
+	color: var(--color-main-text);
 }
 
 .pods-new-plus {
