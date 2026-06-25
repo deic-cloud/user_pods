@@ -5,7 +5,7 @@
 \OCP\Util::addStyle('user_pods', 'main');
 ?>
 <div id="app-content">
-	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p($_SERVER['REMOTE_ADDR'] ?? ''); ?>">
+	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p(\OCP\Server::get(\OCP\IRequest::class)->getRemoteAddress()); ?>">
 		<div class="pods-header">
 			<h2 class="pods-title"><?php p($l->t('Containers')); ?></h2>
 			<button id="pod-create" type="button" class="button primary pods-new-btn">
