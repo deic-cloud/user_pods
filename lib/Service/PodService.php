@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Thin client over the sciencedata_kubernetes host service. Each method maps to
- * one of the host's `*.php` endpoints (reached at http://<managementIP>/...), or to
+ * one of the host's `*.php` endpoints (reached at http://<podManagementIP>/...), or to
  * the GitHub manifest library. The host service (the battle-tested run_pod bash
  * script et al.) is NOT touched — this only preserves the request contract.
  *
@@ -19,7 +19,7 @@ use Psr\Log\LoggerInterface;
  */
 class PodService {
 	private string $publicIP;
-	private string $managementIP;
+	private string $podManagementIP;
 	private string $storageDir;
 	private string $manifestsURL;
 	private string $rawManifestsURL;
@@ -33,7 +33,7 @@ class PodService {
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
 		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
-		$this->managementIP = $appConfig->getValueString('user_pods', 'managementIP', '')
+		$this->podManagementIP = $appConfig->getValueString('user_pods', 'podManagementIP', '')
 			?: $appConfig->getValueString('user_pods', 'privateIP', '');
 		$this->storageDir = $appConfig->getValueString('user_pods', 'storageDir', '');
 		// Manifest library defaults point at the deic-dk pod_manifests repo.
@@ -69,7 +69,7 @@ class PodService {
 				'verify' => $verify,
 				'timeout' => 60,
 				'headers' => ['User-Agent' => 'ScienceData-user_pods'],
-				// The host service lives on a private management IP (managementIP,
+				// The host service lives on a private management IP (podManagementIP,
 				// e.g. 10.0.0.12). NC's IClientService blocks local/private hosts
 				// as SSRF targets by default, which silently turns every pod call
 				// into an empty response. Opt this trusted endpoint back in per
@@ -88,7 +88,7 @@ class PodService {
 	}
 
 	private function podEndpoint(string $script, array $params): string {
-		return 'http://' . $this->managementIP . '/' . $script . '?' . http_build_query($params);
+		return 'http://' . $this->podManagementIP . '/' . $script . '?' . http_build_query($params);
 	}
 
 	public function createStorageDir(string $uid): void {
