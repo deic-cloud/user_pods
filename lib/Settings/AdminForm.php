@@ -14,7 +14,7 @@ use OCP\Settings\IDeclarativeSettingsForm;
  * storage_type = internal means core reads/writes each field straight to this
  * app's config (user_pods/<field id>) — the exact keys PodService consumes —
  * so no controller or JS is needed. Field ids therefore MUST match the keys in
- * PodService: publicIP, privateIP, storageDir, manifestsURL, rawManifestsURL.
+ * PodService: publicIP, managementIP, storageDir, manifestsURL, rawManifestsURL.
  */
 class AdminForm implements IDeclarativeSettingsForm {
 	public function getSchema(): array {
@@ -28,8 +28,8 @@ class AdminForm implements IDeclarativeSettingsForm {
 			'description' => 'Connection to the ScienceData Kubernetes host service and the manifest (image) library.',
 			'fields' => [
 				[
-					'id' => 'privateIP',
-					'title' => 'Host service IP (private)',
+					'id' => 'managementIP',
+					'title' => 'Management IP (private)',
 					'description' => 'Private management IP/host where the sciencedata_kubernetes endpoints (run_pod.php, get_containers.php, …) are reached, e.g. 10.0.0.12.',
 					'type' => DeclarativeSettingsTypes::TEXT,
 					'placeholder' => '10.0.0.12',

@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Thin client over the sciencedata_kubernetes host service. Each method maps to
- * one of the host's `*.php` endpoints (reached at http://<privateIP>/...), or to
+ * one of the host's `*.php` endpoints (reached at http://<managementIP>/...), or to
  * the GitHub manifest library. The host service (the battle-tested run_pod bash
  * script et al.) is NOT touched — this only preserves the request contract.
  *
@@ -19,10 +19,11 @@ use Psr\Log\LoggerInterface;
  */
 class PodService {
 	private string $publicIP;
-	private string $privateIP;
+	private string $managementIP;
 	private string $storageDir;
 	private string $manifestsURL;
 	private string $rawManifestsURL;
+	private string $getContainersPassword;
 
 	public function __construct(
 		IAppConfig $appConfig,
@@ -31,13 +32,21 @@ class PodService {
 		private LoggerInterface $logger,
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
-		$this->privateIP = $appConfig->getValueString('user_pods', 'privateIP', '');
+		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
+		$this->managementIP = $appConfig->getValueString('user_pods', 'managementIP', '')
+			?: $appConfig->getValueString('user_pods', 'privateIP', '');
 		$this->storageDir = $appConfig->getValueString('user_pods', 'storageDir', '');
 		// Manifest library defaults point at the deic-dk pod_manifests repo.
 		$this->manifestsURL = $appConfig->getValueString('user_pods', 'manifestsURL',
 			'https://api.github.com/repos/deic-dk/pod_manifests/contents');
 		$this->rawManifestsURL = $appConfig->getValueString('user_pods', 'rawManifestsURL',
 			'https://raw.githubusercontent.com/deic-dk/pod_manifests/main/');
+		// Shared secret proving the caller is authorised to query the host's
+		// get_containers endpoint. The endpoint lives on the 10.2 pod network
+		// where any pod can reach it, so this gates access (low-value data — a
+		// weak password by design). Sent as a plain ?password= GET param, matching
+		// the host side. Empty = don't send (endpoint then open, as before).
+		$this->getContainersPassword = $appConfig->getValueString('user_pods', 'getContainersPassword', '');
 	}
 
 	public function getRawManifestsURL(): string {
@@ -60,7 +69,7 @@ class PodService {
 				'verify' => $verify,
 				'timeout' => 60,
 				'headers' => ['User-Agent' => 'ScienceData-user_pods'],
-				// The host service lives on a private management IP (privateIP,
+				// The host service lives on a private management IP (managementIP,
 				// e.g. 10.0.0.12). NC's IClientService blocks local/private hosts
 				// as SSRF targets by default, which silently turns every pod call
 				// into an empty response. Opt this trusted endpoint back in per
@@ -79,7 +88,7 @@ class PodService {
 	}
 
 	private function podEndpoint(string $script, array $params): string {
-		return 'http://' . $this->privateIP . '/' . $script . '?' . http_build_query($params);
+		return 'http://' . $this->managementIP . '/' . $script . '?' . http_build_query($params);
 	}
 
 	public function createStorageDir(string $uid): void {
@@ -100,7 +109,11 @@ class PodService {
 	 * @return array<int, array<string, string>>
 	 */
 	public function getContainers(string $uid, ?array $podNames = null): array {
-		$url = $this->podEndpoint('get_containers.php', ['fields' => 'include', 'user_id' => $uid]);
+		$params = ['fields' => 'include', 'user_id' => $uid];
+		if ($this->getContainersPassword !== '') {
+			$params['password'] = $this->getContainersPassword;
+		}
+		$url = $this->podEndpoint('get_containers.php', $params);
 		$response = trim($this->httpGet($url, false));
 		if ($response === '') {
 			return [];
