@@ -22,10 +22,10 @@ class AdminForm implements IDeclarativeSettingsForm {
 			'id' => 'user_pods_admin',
 			'priority' => 50,
 			'section_type' => DeclarativeSettingsTypes::SECTION_TYPE_ADMIN,
-			'section_id' => 'additional',
+			'section_id' => 'user-pods',
 			'storage_type' => DeclarativeSettingsTypes::STORAGE_TYPE_INTERNAL,
-			'title' => 'Containers',
-			'description' => 'Connection to the ScienceData Kubernetes host service and the manifest (image) library.',
+			'title' => 'Host service and image library',
+			'description' => 'Connection to the container host service (sciencedata_kubernetes) and the manifest (image) library.',
 			'fields' => [
 				[
 					'id' => 'podManagementIP',
@@ -38,9 +38,9 @@ class AdminForm implements IDeclarativeSettingsForm {
 				[
 					'id' => 'publicIP',
 					'title' => 'Public hostname',
-					'description' => 'Public hostname/IP used to build the URLs (pod web + SSH) shown to users, e.g. kube.sciencedata.dk.',
+					'description' => 'Public hostname/IP used to build the URLs (pod web + SSH) shown to users, e.g. kube.example.org.',
 					'type' => DeclarativeSettingsTypes::TEXT,
-					'placeholder' => 'kube.sciencedata.dk',
+					'placeholder' => 'kube.example.org',
 					'default' => '',
 				],
 				[

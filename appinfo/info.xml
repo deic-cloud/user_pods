@@ -4,8 +4,8 @@
 	<id>user_pods</id>
 	<name>Containers</name>
 	<summary>Create and manage containers — a root shell with trusted access to your data</summary>
-	<description>A web interface for creating and managing containers on ScienceData. Each container gives the user a root shell on an ephemeral system with fast, trusted access to their data, and can be snapshotted into a reusable image. A thin UI over the ScienceData Kubernetes host service (sciencedata_kubernetes); container templates are served from a manifest library. Depends on files_sharding and user_group_admin.</description>
-	<version>0.17.1</version>
+	<description>A web interface for creating and managing containers. Each container gives the user a root shell on an ephemeral system with fast, trusted access to their data, and can be snapshotted into a reusable image. A thin UI over a Kubernetes host service (sciencedata_kubernetes); container templates are served from a manifest library. Depends on files_sharding and user_group_admin.</description>
+	<version>0.17.2</version>
 	<licence>agpl</licence>
 	<author mail="fror@dtu.dk">Frederik Orellana, DTU</author>
 	<author>Ioanna Psylla</author>
@@ -19,6 +19,9 @@
 		<nextcloud min-version="28" max-version="35"/>
 		<php min-version="8.2"/>
 	</dependencies>
+	<settings>
+		<admin-section>OCA\UserPods\Settings\AdminSection</admin-section>
+	</settings>
 	<navigations>
 		<navigation>
 			<name>Containers</name>

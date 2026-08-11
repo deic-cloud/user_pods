@@ -73,7 +73,7 @@
 				<div id="setup" class="pods-hidden"></div>
 				<div id="file" class="pods-hidden"><span id="file_text"><?php p($l->t('File')); ?>:</span>
 					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your container')); ?>"
-						title="<?php p($l->t('Path of file in your ScienceData Home')); ?>">
+						title="<?php p($l->t('Path of file in your Home')); ?>">
 				</div>
 				<div id="peers" class="pods-hidden"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
 					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your container')); ?>"
