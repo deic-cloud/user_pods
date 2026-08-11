@@ -24,13 +24,13 @@ class AdminForm implements IDeclarativeSettingsForm {
 			'section_type' => DeclarativeSettingsTypes::SECTION_TYPE_ADMIN,
 			'section_id' => 'user-pods',
 			'storage_type' => DeclarativeSettingsTypes::STORAGE_TYPE_INTERNAL,
-			'title' => 'Host service and image library',
-			'description' => 'Connection to the container host service (sciencedata_kubernetes) and the manifest (image) library.',
+			'title' => 'Kubernetes service and image library',
+			'description' => 'Endpoints of the container service and image library',
 			'fields' => [
 				[
 					'id' => 'podManagementIP',
 					'title' => 'Management IP (private)',
-					'description' => 'Private management IP/host where the sciencedata_kubernetes endpoints (run_pod.php, get_containers.php, …) are reached, e.g. 10.0.0.12.',
+					'description' => 'Private IP/hostname of the Kubernetes frontend',
 					'type' => DeclarativeSettingsTypes::TEXT,
 					'placeholder' => '10.0.0.12',
 					'default' => '',
@@ -38,7 +38,7 @@ class AdminForm implements IDeclarativeSettingsForm {
 				[
 					'id' => 'publicIP',
 					'title' => 'Public hostname',
-					'description' => 'Public hostname/IP used to build the URLs (pod web + SSH) shown to users, e.g. kube.example.org.',
+					'description' => 'Public hostname of the Kubernetes frontend',
 					'type' => DeclarativeSettingsTypes::TEXT,
 					'placeholder' => 'kube.example.org',
 					'default' => '',
@@ -46,7 +46,7 @@ class AdminForm implements IDeclarativeSettingsForm {
 				[
 					'id' => 'storageDir',
 					'title' => 'Storage directory',
-					'description' => 'Directory exposed to pods as /storage via WebDAV and NFS (NFSv4.1).',
+					'description' => 'Directory exposed to pods as /storage via WebDAV and NFS.',
 					'type' => DeclarativeSettingsTypes::TEXT,
 					'placeholder' => '/tank/storage',
 					'default' => '',
@@ -54,7 +54,7 @@ class AdminForm implements IDeclarativeSettingsForm {
 				[
 					'id' => 'manifestsURL',
 					'title' => 'Manifest library — listing API',
-					'description' => 'GitHub contents API URL used to list the available image manifests (*.yaml).',
+					'description' => 'GitHub contents API URL used to list image manifests',
 					'type' => 'url',
 					'placeholder' => 'https://api.github.com/repos/deic-dk/pod_manifests/contents',
 					'default' => 'https://api.github.com/repos/deic-dk/pod_manifests/contents',
@@ -62,7 +62,7 @@ class AdminForm implements IDeclarativeSettingsForm {
 				[
 					'id' => 'rawManifestsURL',
 					'title' => 'Manifest library — raw file base',
-					'description' => 'Base URL for fetching a manifest .yaml and its sibling .md (raw files).',
+					'description' => 'Base URL for fetching yaml and md (image description) files.',
 					'type' => 'url',
 					'placeholder' => 'https://raw.githubusercontent.com/deic-dk/pod_manifests/main/',
 					'default' => 'https://raw.githubusercontent.com/deic-dk/pod_manifests/main/',
