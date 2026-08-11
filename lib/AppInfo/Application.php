@@ -8,6 +8,8 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
+use OCA\UserPods\Listener\AdminSettingsStyleListener;
 use OCA\UserPods\Settings\AdminForm;
 
 class Application extends App implements IBootstrap {
@@ -19,6 +21,7 @@ class Application extends App implements IBootstrap {
 
 	public function register(IRegistrationContext $context): void {
 		$context->registerDeclarativeSettings(AdminForm::class);
+		$context->registerEventListener(BeforeTemplateRenderedEvent::class, AdminSettingsStyleListener::class);
 	}
 
 	public function boot(IBootContext $context): void {

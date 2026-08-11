@@ -1,0 +1,10 @@
+/*
+ * Nudge the Containers admin section down so its heading clears the top-left
+ * "Close navigation" toggle, which otherwise partly overlaps it (a quirk shared
+ * by all native settings sections). This stylesheet is only loaded on our own
+ * section page (see AdminSettingsStyleListener), so the selector only ever
+ * matches our declarative form — not other apps' sections.
+ */
+.declarative-settings-section {
+	margin-block-start: 1.5rem;
+}
