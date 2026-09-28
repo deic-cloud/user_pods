@@ -190,6 +190,9 @@ class PodService {
 		if ($yamlFile === '') {
 			return [];
 		}
+		if (!function_exists('yaml_parse')) {
+			throw new PodHostException('This server cannot read container manifests: the PHP yaml extension is not installed.');
+		}
 		$yamlUrl = $this->rawManifestsURL . $yamlFile;
 		$arr = yaml_parse($this->httpGet($yamlUrl));
 		if (!is_array($arr)) {

@@ -18,6 +18,7 @@
 	<dependencies>
 		<nextcloud min-version="28" max-version="35"/>
 		<php min-version="8.2"/>
+		<lib>yaml</lib>
 	</dependencies>
 	<settings>
 		<admin-section>OCA\UserPods\Settings\AdminSection</admin-section>
