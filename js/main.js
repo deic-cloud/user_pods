@@ -649,9 +649,8 @@
 			if (del) {
 				e.preventDefault()
 				const podName = del.closest('tr').querySelector('div[data-column="pod_name"] span').textContent.trim()
-				const confirm = (OC.dialogs && OC.dialogs.confirm) ? OC.dialogs.confirm : null
-				if (confirm) {
-					confirm(t(APP, 'Are you sure you want to delete the container') + ' ' + podName + '?',
+				if (OC.dialogs && OC.dialogs.confirm) {
+					OC.dialogs.confirm(t(APP, 'Are you sure you want to delete the container') + ' ' + podName + '?',
 						t(APP, 'Delete confirmation'), (ok) => { if (ok) deletePod(podName) })
 				} else if (window.confirm(t(APP, 'Delete container') + ' ' + podName + '?')) {
 					deletePod(podName)
