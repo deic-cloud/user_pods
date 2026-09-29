@@ -91,13 +91,22 @@ class PodService {
 		return 'http://' . $this->podManagementIP . '/' . $script . '?' . http_build_query($params);
 	}
 
-	public function createStorageDir(string $uid): void {
+	/**
+	 * Make sure the user's storage folder, and $sub inside it, exist before a
+	 * container attaches it over NFS: this server is the user's home server, so
+	 * the folder is local. Refuses a $sub that climbs out of the user's folder.
+	 */
+	public function createStorageDir(string $uid, string $sub = ''): void {
 		if ($this->storageDir === '') {
 			return;
 		}
-		$path = rtrim($this->storageDir, '/') . '/' . $uid;
-		if (!is_dir($path)) {
-			@mkdir($path, 0755, true);
+		$sub = trim($sub, '/');
+		if (in_array('..', explode('/', $sub), true) || str_contains($uid, '/') || str_starts_with($uid, '.')) {
+			throw new PodHostException('Invalid storage folder: ' . $sub);
+		}
+		$path = rtrim($this->storageDir, '/') . '/' . $uid . ($sub === '' ? '' : '/' . $sub);
+		if (!is_dir($path) && !@mkdir($path, 0755, true) && !is_dir($path)) {
+			throw new PodHostException('Could not create the storage folder /storage/' . $sub);
 		}
 	}
 
@@ -308,6 +317,9 @@ class PodService {
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
 		string $peers = '', string $allowedIp = '', string $podType = ''): array {
+		if ($mountRoot === 'storage' && $mountPath !== '') {
+			$this->createStorageDir($uid, $mountPath);
+		}
 		$params = ['user_id' => $uid, 'yaml_url' => $yamlUrl];
 		if ($publicKey !== '') {
 			$params['public_key'] = $publicKey;
