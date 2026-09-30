@@ -5,10 +5,13 @@ declare(strict_types=1);
 return [
 	'routes' => [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
+		// The image catalog as a public page, with Launch links into the app.
+		['name' => 'page#catalog', 'url' => '/catalog', 'verb' => 'GET'],
 
 		// Pod management — thin JSON API over the sciencedata_kubernetes host service.
 		['name' => 'api#containers',  'url' => '/api/containers',      'verb' => 'GET'],
 		['name' => 'api#manifests',   'url' => '/api/manifests',       'verb' => 'GET'],
+		['name' => 'api#catalog',     'url' => '/api/catalog',         'verb' => 'GET'],
 		['name' => 'api#manifest',    'url' => '/api/manifest',        'verb' => 'GET'],
 		['name' => 'api#create',      'url' => '/api/pod',             'verb' => 'POST'],
 		['name' => 'api#delete',      'url' => '/api/pod/delete',      'verb' => 'POST'],

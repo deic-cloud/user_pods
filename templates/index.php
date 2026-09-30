@@ -3,6 +3,7 @@
 /** @var array $_ */
 \OCP\Util::addScript('user_pods', 'main');
 \OCP\Util::addStyle('user_pods', 'main');
+\OCP\Util::addStyle('user_pods', 'gallery');
 ?>
 <div id="app-content">
 	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p(\OCP\Server::get(\OCP\IRequest::class)->getRemoteAddress()); ?>">
@@ -35,8 +36,15 @@
 					</button>
 				</div>
 				<div class="pods-modal-body">
-					<div id="newpod">
-				<span class="spanpanel">
+					<div id="pods-gallery">
+						<input id="pods-gallery-search" type="search" placeholder="<?php p($l->t('Search images')); ?>"
+							aria-label="<?php p($l->t('Search images')); ?>">
+						<div id="pods-gallery-list"></div>
+						<p class="pods-gallery-more"><a href="<?php p(\OCP\Server::get(\OCP\IURLGenerator::class)->linkToRoute('user_pods.page.catalog')); ?>" target="_blank" rel="noopener"><?php p($l->t('All images on one page')); ?></a></p>
+					</div>
+					<div id="newpod" class="pods-hidden">
+				<a id="pods-gallery-back" href="#" class="pods-gallery-back">&larr; <?php p($l->t('All images')); ?></a>
+				<span class="spanpanel pods-hidden">
 					<select id="yaml_file" title="<?php p($l->t('YAML file')); ?>">
 						<option value=""></option>
 					</select>
@@ -69,16 +77,19 @@
 				</div>
 				<div id="pod_type" class="pods-hidden"><label><?php p($l->t('Instance type:')); ?></label></div>
 				<div id="storage" class="pods-hidden"></div>
-				<div id="cvmfs" class="pods-hidden"></div>
-				<div id="setup" class="pods-hidden"></div>
 				<div id="file" class="pods-hidden"><span id="file_text"><?php p($l->t('File')); ?>:</span>
 					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your container')); ?>"
 						title="<?php p($l->t('Path of file in your Home')); ?>">
 				</div>
+				<details id="pods-advanced" class="pods-hidden">
+					<summary><?php p($l->t('Advanced')); ?></summary>
+				<div id="cvmfs" class="pods-hidden"></div>
+				<div id="setup" class="pods-hidden"></div>
 				<div id="peers" class="pods-hidden"><span id="peers_text"><?php p($l->t('Peers')); ?>:</span>
 					<input id="peers_input" type="text" placeholder="<?php p($l->t('Optional peers to pass to your container')); ?>"
 						title="<?php p($l->t('List of the form hostname1:ip1,hostname2:ip2,…')); ?>">
 				</div>
+				</details>
 					</div>
 				</div>
 			</div>

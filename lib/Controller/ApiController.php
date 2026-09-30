@@ -67,6 +67,12 @@ class ApiController extends Controller {
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	public function catalog(): JSONResponse {
+		return $this->host(fn () => $this->pods->getCatalog($this->uid()));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function manifest(string $yaml = ''): JSONResponse {
 		return $this->host(fn () => $this->pods->checkManifest($this->uid(), $yaml));
 	}

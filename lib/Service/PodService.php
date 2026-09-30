@@ -7,6 +7,7 @@ namespace OCA\UserPods\Service;
 use OCA\UserPods\Exception\PodHostException;
 use OCP\Http\Client\IClientService;
 use OCP\IAppConfig;
+use OCP\ICacheFactory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -30,6 +31,7 @@ class PodService {
 		private IClientService $clientService,
 		private GroupBridge $groups,
 		private LoggerInterface $logger,
+		private ICacheFactory $cacheFactory,
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
 		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
@@ -68,7 +70,7 @@ class PodService {
 			$response = $this->clientService->newClient()->get($url, [
 				'verify' => $verify,
 				'timeout' => 60,
-				'headers' => ['User-Agent' => 'ScienceData-user_pods'],
+				'headers' => ['User-Agent' => 'Nextcloud-user_pods'],
 				// The host service lives on a private management IP (podManagementIP,
 				// e.g. 10.0.0.12). NC's IClientService blocks local/private hosts
 				// as SSRF targets by default, which silently turns every pod call
@@ -208,37 +210,8 @@ class PodService {
 			return [];
 		}
 		$labels = $arr['metadata']['labels'] ?? [];
-		$yamlGroup = (string)($labels['group'] ?? '');
-		$yamlDomain = (string)($labels['domain'] ?? '');
-		$yamlUser = (string)($labels['user'] ?? '');
 		$podTypes = empty($labels['types']) ? [] : explode('-', (string)$labels['types']);
-
-		$shortUser = $uid;
-		$domain = '';
-		if (str_contains($uid, '@')) {
-			[$shortUser, $domain] = explode('@', $uid, 2);
-		}
-
-		$allowed = false;
-		if ($yamlDomain === '' && $yamlUser === '' && $yamlGroup === '') {
-			$allowed = true; // no restriction
-		} else {
-			if ($yamlDomain === '' && $yamlUser !== '' && $yamlUser === $shortUser) {
-				$allowed = true; // system user
-			}
-			if ($yamlUser === '' && $yamlDomain !== '' && $yamlDomain === $domain) {
-				$allowed = true; // whole domain
-			}
-			// Specific user within a domain. (OC7 returned [] here — a bug; it had
-			// just confirmed a match. Treat as allowed.)
-			if ($yamlUser !== '' && $yamlDomain !== '' && $yamlUser === $shortUser && $yamlDomain === $domain) {
-				$allowed = true;
-			}
-			if ($yamlGroup !== '' && $this->groups->inGroup($uid, $yamlGroup)) {
-				$allowed = true; // group member
-			}
-		}
-		if (!$allowed) {
+		if (!$this->mayLaunch($uid, is_array($labels) ? $labels : [])) {
 			$this->logger->info('user_pods: ' . $uid . ' not allowed manifest ' . $yamlFile, ['app' => 'user_pods']);
 			return [];
 		}
@@ -311,6 +284,191 @@ class PodService {
 			'pod_types' => $podTypes,
 		];
 		return array_filter($ret, static fn ($v) => $v !== null);
+	}
+
+	/** Whether a manifest's access labels (domain/user/group) let $uid launch it. */
+	private function mayLaunch(string $uid, array $labels): bool {
+		$yamlGroup = (string)($labels['group'] ?? '');
+		$yamlDomain = (string)($labels['domain'] ?? '');
+		$yamlUser = (string)($labels['user'] ?? '');
+		if ($yamlDomain === '' && $yamlUser === '' && $yamlGroup === '') {
+			return true; // no restriction
+		}
+		$shortUser = $uid;
+		$domain = '';
+		if (str_contains($uid, '@')) {
+			[$shortUser, $domain] = explode('@', $uid, 2);
+		}
+		if ($yamlDomain === '' && $yamlUser !== '' && $yamlUser === $shortUser) {
+			return true; // system user
+		}
+		if ($yamlUser === '' && $yamlDomain !== '' && $yamlDomain === $domain) {
+			return true; // whole domain
+		}
+		// Specific user within a domain. (OC7 returned [] here — a bug; it had
+		// just confirmed a match. Treat as allowed.)
+		if ($yamlUser !== '' && $yamlDomain !== '' && $yamlUser === $shortUser && $yamlDomain === $domain) {
+			return true;
+		}
+		return $yamlGroup !== '' && $this->groups->inGroup($uid, $yamlGroup); // group member
+	}
+
+	private const LIBRARY_TTL = 600;
+
+	/**
+	 * The whole manifest library — labels, annotations and description of every
+	 * manifest — fetched in parallel and cached for LIBRARY_TTL seconds, so the
+	 * catalog does not cost one listing call (rate-limited) plus two fetches per
+	 * image on every page load.
+	 *
+	 * @return array<string, array{labels: array, annotations: array, md: string}>
+	 */
+	private function library(): array {
+		$cache = $this->cacheFactory->createDistributed('user_pods');
+		$hit = $cache->get('library');
+		if (is_array($hit)) {
+			return $hit;
+		}
+		if (!function_exists('yaml_parse')) {
+			throw new PodHostException('This server cannot read container manifests: the PHP yaml extension is not installed.');
+		}
+		try {
+			$names = $this->getManifests();
+		} catch (PodHostException $e) {
+			// The library cannot be listed (e.g. GitHub unreachable): serve the
+			// last good copy if there is one.
+			$stale = $cache->get('library_stale');
+			if (is_array($stale)) {
+				return $stale;
+			}
+			throw $e;
+		}
+		$urls = [];
+		foreach ($names as $name) {
+			$urls[$name] = $this->rawManifestsURL . $name;
+			$urls[$name . '#md'] = $this->rawManifestsURL . preg_replace('/\.yaml$/', '.md', $name);
+		}
+		$bodies = $this->fetchAll($urls);
+		$lib = [];
+		foreach ($names as $name) {
+			$arr = isset($bodies[$name]) ? @yaml_parse($bodies[$name]) : null;
+			if (!is_array($arr)) {
+				$this->logger->warning('user_pods: could not read manifest ' . $name, ['app' => 'user_pods']);
+				continue;
+			}
+			$meta = $arr['metadata'] ?? [];
+			$lib[$name] = [
+				'labels' => is_array($meta['labels'] ?? null) ? $meta['labels'] : [],
+				'annotations' => is_array($meta['annotations'] ?? null) ? $meta['annotations'] : [],
+				'md' => $bodies[$name . '#md'] ?? '',
+			];
+		}
+		if ($lib !== []) {
+			$cache->set('library', $lib, self::LIBRARY_TTL);
+			$cache->set('library_stale', $lib, 86400);
+		}
+		return $lib;
+	}
+
+	/**
+	 * GET many URLs at once. Nextcloud's HTTP client runs requests one after
+	 * another (its Guzzle handler is synchronous), which makes reading a library
+	 * of a few dozen manifests take many seconds; curl_multi fetches them in
+	 * parallel. The URLs come from the app's own config (the manifest library),
+	 * and the instance's proxy setting is honoured.
+	 *
+	 * @param array<string, string> $urls key => URL
+	 * @return array<string, string> key => body, for the requests that returned 200
+	 */
+	private function fetchAll(array $urls): array {
+		$multi = curl_multi_init();
+		$handles = [];
+		$proxy = (string)\OCP\Server::get(\OCP\IConfig::class)->getSystemValue('proxy', '');
+		foreach ($urls as $key => $u) {
+			$h = curl_init($u);
+			curl_setopt_array($h, [
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_TIMEOUT => 30,
+				CURLOPT_USERAGENT => 'Nextcloud-user_pods',
+				CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP,
+			]);
+			if ($proxy !== '') {
+				curl_setopt($h, CURLOPT_PROXY, $proxy);
+			}
+			curl_multi_add_handle($multi, $h);
+			$handles[$key] = $h;
+		}
+		do {
+			$status = curl_multi_exec($multi, $running);
+			if ($running) {
+				curl_multi_select($multi, 1.0);
+			}
+		} while ($running && $status === CURLM_OK);
+		$out = [];
+		foreach ($handles as $key => $h) {
+			if (curl_getinfo($h, CURLINFO_RESPONSE_CODE) === 200) {
+				$out[$key] = (string)curl_multi_getcontent($h);
+			}
+			curl_multi_remove_handle($multi, $h);
+		}
+		curl_multi_close($multi);
+		return $out;
+	}
+
+	/**
+	 * The image catalog: one entry per listed manifest, from its catalog/*
+	 * annotations, with fallbacks (title from the file name, summary from the
+	 * first paragraph of its description, category "Other") for manifests
+	 * without them. catalog/hidden manifests are left out (still launchable by
+	 * URL). With $uid, each entry says whether that user may launch it.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function getCatalog(?string $uid): array {
+		$out = [];
+		foreach ($this->library() as $file => $m) {
+			$a = $m['annotations'];
+			if (in_array(strtolower(trim((string)($a['catalog/hidden'] ?? ''))), ['true', '1', 'yes'], true)) {
+				continue;
+			}
+			$l = $m['labels'];
+			$featured = trim((string)($a['catalog/featured'] ?? ''));
+			$entry = [
+				'file' => $file,
+				'title' => trim((string)($a['catalog/title'] ?? '')) ?: self::titleFromFile($file),
+				'category' => trim((string)($a['catalog/category'] ?? '')) ?: 'Other',
+				'summary' => trim((string)($a['catalog/summary'] ?? '')) ?: self::summaryFromMd($m['md']),
+				'featured' => is_numeric($featured) ? (int)$featured : null,
+				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
+				'restricted' => ($l['group'] ?? '') !== '' || ($l['domain'] ?? '') !== '' || ($l['user'] ?? '') !== '',
+			];
+			if ($uid !== null) {
+				$entry['allowed'] = $this->mayLaunch($uid, $l);
+			}
+			$out[] = $entry;
+		}
+		usort($out, static fn ($x, $y) => [$x['category'] === 'Other', $x['category'], $x['title']]
+			<=> [$y['category'] === 'Other', $y['category'], $y['title']]);
+		return $out;
+	}
+
+	private static function titleFromFile(string $file): string {
+		return ucfirst(str_replace(['_', '-'], ' ', preg_replace('/\.yaml$/', '', $file)));
+	}
+
+	/** First paragraph of a manifest's .md, as plain text, without the stock opening. */
+	private static function summaryFromMd(string $md): string {
+		foreach (preg_split('/\n\s*\n/', trim($md)) as $para) {
+			$text = trim(preg_replace('/\s+/', ' ', preg_replace(['/\[([^\]]*)\]\([^)]*\)/', '/[*_`#>]/'], ['$1', ''], $para)));
+			if ($text === '') {
+				continue;
+			}
+			$text = preg_replace('/^Applying this manifest will (start|run|create) /i', '', $text);
+			$text = ucfirst(rtrim($text, '.'));
+			return mb_strlen($text) > 160 ? rtrim(mb_substr($text, 0, 157)) . '…' : $text;
+		}
+		return '';
 	}
 
 	/** Create a pod via run_pod.php. Returns the host's JSON response decoded. */

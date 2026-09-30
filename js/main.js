@@ -4,7 +4,7 @@
  * Self-contained vanilla JS — no jQuery, no marked, no tipsy (none are reliably
  * global in NC34). Talks to the AppFramework REST API in lib/Controller/ApiController:
  *   GET  api/containers            -> [ {pod_name, status, url, ssh_url, ...}, ... ]
- *   GET  api/manifests             -> [ "foo.yaml", ... ]
+ *   GET  api/catalog               -> [ {file, title, category, summary, featured, kernels, restricted, allowed}, ... ]
  *   GET  api/manifest?yaml=foo     -> { manifest_url, pod_accepts_*, container_infos, ... } | []
  *   POST api/pod                   -> { status, data:{ name, message } }   (raw host shape)
  *   POST api/pod/delete            -> { status, data:{ name, message } }
@@ -161,7 +161,7 @@
 		if ((c.status || '').includes('Running') && c.url) {
 			return '<td><div data-column="view"><span><a href="' + esc(c.url) + '">' + esc(c.url) + '</a></span></div></td>'
 		}
-		const text = (c.status || '').includes('Running') ? 'none' : 'wait'
+		const text = (c.status || '').includes('Running') ? '—' : t(APP, 'Starting…')
 		return '<td><div data-column="view"><span>' + text + '</span></div></td>'
 	}
 
@@ -393,9 +393,24 @@
 		expander.classList.toggle('expanded', !isExpanded)
 	}
 
-	function openModal() {
+	// The New container dialog has two views: the gallery of images, and the
+	// launch form for the chosen one.
+	function showGallery() {
+		show($('#pods-gallery'), true)
+		show($('#newpod'), false)
+		const search = $('#pods-gallery-search')
+		if (search) { search.value = ''; renderGallery(''); search.focus() }
+	}
+
+	function showForm() {
+		show($('#pods-gallery'), false)
+		show($('#newpod'), true)
+	}
+
+	function openModal(withGallery = true) {
 		const m = $('#pods-modal')
 		if (m) m.hidden = false
+		if (withGallery) showGallery()
 	}
 
 	function closeModal() {
@@ -456,6 +471,7 @@
 					show($('#peers'), false)
 					show($('#cvmfs'), false)
 					show($('#setup'), false)
+					updateAdvanced()
 					return
 				}
 				currentManifestUrl = d.manifest_url
@@ -494,9 +510,19 @@
 				}
 
 				buildMountInputs(d)
+				updateAdvanced()
 			})
 			.catch((e) => alertError(t(APP, 'check_manifest: Something went wrong. ') + e))
 			.finally(() => { if (spinner) spinner.hidden = true })
+	}
+
+	// The Advanced section is shown only when the image has one of its fields.
+	function updateAdvanced() {
+		const adv = $('#pods-advanced')
+		if (!adv) return
+		const any = ['#cvmfs', '#setup', '#peers'].some((sel) => { const el = $(sel); return el && !el.classList.contains('pods-hidden') })
+		show(adv, any)
+		if (!any) adv.open = false
 	}
 
 	function buildMountInputs(d) {
@@ -596,17 +622,90 @@
 
 	// ---- bootstrap -------------------------------------------------------
 
-	function loadManifests() {
-		return apiGet('api/manifests', 'Loading manifests…').then((list) => {
-			if (!Array.isArray(list)) return
-			const select = $('#yaml_file')
-			list.forEach((name) => {
-				const opt = document.createElement('option')
-				opt.value = name
-				opt.textContent = name.replace(/\.yaml$/, '')
-				select.appendChild(opt)
-			})
+	let catalog = []
+
+	function addOption(file) {
+		const select = $('#yaml_file')
+		if (!Array.from(select.options).some((o) => o.value === file)) {
+			const opt = document.createElement('option')
+			opt.value = file
+			opt.textContent = file.replace(/\.yaml$/, '')
+			select.appendChild(opt)
+		}
+	}
+
+	function loadCatalog() {
+		return apiGet('api/catalog', 'Loading images…').then((list) => {
+			if (!Array.isArray(list)) {
+				alertError(t(APP, 'Could not load the images: ') + (hostMessage(list) || t(APP, 'Something went wrong…')))
+				return
+			}
+			catalog = list
+			list.forEach((e) => addOption(e.file))
+			renderGallery('')
 		})
+	}
+
+	function card(e) {
+		const off = e.allowed === false
+		return '<button type="button" class="pods-card' + (off ? ' pods-card-disabled' : '') + '" data-file="' + esc(e.file) + '">'
+			+ '<span class="pods-card-title">' + esc(e.title) + '</span>'
+			+ '<span class="pods-card-summary">' + esc(e.summary) + '</span>'
+			+ (e.restricted ? '<span class="pods-card-foot"><span class="pods-card-badge">'
+				+ esc(off ? t(APP, 'Restricted') : t(APP, 'Restricted – you have access')) + '</span></span>' : '')
+			+ '</button>'
+	}
+
+	function renderGallery(query) {
+		const listEl = $('#pods-gallery-list')
+		if (!listEl) return
+		const q = String(query || '').trim().toLowerCase()
+		const match = (e) => !q || (e.title + ' ' + e.summary + ' ' + e.category + ' ' + e.file).toLowerCase().includes(q)
+		const shown = catalog.filter(match)
+		let html = ''
+		if (!q) {
+			const featured = catalog.filter((e) => e.featured !== null && e.featured !== undefined)
+				.sort((a, b) => a.featured - b.featured)
+			if (featured.length) {
+				html += '<h3 class="pods-catalog-heading">' + esc(t(APP, 'Start here')) + '</h3>'
+					+ '<div class="pods-gallery-grid">' + featured.map(card).join('') + '</div>'
+			}
+		}
+		const categories = []
+		shown.forEach((e) => { if (!categories.includes(e.category)) categories.push(e.category) })
+		categories.forEach((c) => {
+			html += '<h3 class="pods-catalog-heading">' + esc(c) + '</h3>'
+				+ '<div class="pods-gallery-grid">' + shown.filter((e) => e.category === c).map(card).join('') + '</div>'
+		})
+		if (!shown.length) {
+			html = '<p class="pods-gallery-none">' + esc(t(APP, 'No image matches your search.')) + '</p>'
+		}
+		listEl.innerHTML = html
+	}
+
+	function selectImage(file) {
+		addOption(file)
+		$('#yaml_file').value = file
+		showForm()
+		return loadYaml(file)
+	}
+
+	// The image for a notebook with the given kernel: an image whose
+	// catalog/notebook-kernels annotation matches the kernel name (patterns
+	// separated by commas, * as wildcard; an exact pattern beats a bare *), else
+	// by name among the jupyter* images. Images the user may launch come first.
+	function imageForKernel(kernel) {
+		const k = String(kernel || '').toLowerCase()
+		const globMatch = (pat) => new RegExp('^' + pat.trim().toLowerCase().replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(k)
+		const ranked = catalog.filter((e) => e.allowed !== false).concat(catalog.filter((e) => e.allowed === false))
+		const specific = ranked.find((e) => e.kernels && e.kernels.split(',').some((p) => p.trim() !== '*' && globMatch(p)))
+		if (specific) return specific.file
+		const any = ranked.find((e) => e.kernels && e.kernels.split(',').some((p) => p.trim() === '*'))
+		if (any) return any.file
+		const jupyter = ranked.filter((e) => /^jupyter/i.test(e.file)).sort((a, b) => a.file.length - b.file.length)
+		const family = /wolfram|mathematica/.test(k) ? /mathematica|wolfram/i : (/matlab/.test(k) ? /matlab/i : null)
+		const pick = family ? jupyter.find((e) => family.test(e.file)) : jupyter.find((e) => !/mathematica|wolfram|matlab/i.test(e.file))
+		return pick ? pick.file : ''
 	}
 
 	function ready() {
@@ -615,6 +714,12 @@
 		clientIp = root.getAttribute('data-client-ip') || ''
 
 		$('#pod-create').addEventListener('click', (e) => { e.preventDefault(); openModal() })
+		$('#pods-gallery-back').addEventListener('click', (e) => { e.preventDefault(); showGallery() })
+		$('#pods-gallery-search').addEventListener('input', function() { renderGallery(this.value) })
+		$('#pods-gallery-list').addEventListener('click', (e) => {
+			const c = e.target.closest('.pods-card')
+			if (c) { e.preventDefault(); selectImage(c.getAttribute('data-file')) }
+		})
 		$('#cancel').addEventListener('click', (e) => { e.preventDefault(); closeModal() })
 		$all('.pods-modal [data-modal-close]').forEach((el) =>
 			el.addEventListener('click', (e) => { e.preventDefault(); const m = el.closest('.pods-modal'); if (m) m.hidden = true }))
@@ -661,13 +766,21 @@
 		// Honour a ?yaml_file=<name>[&file=<path>] deep link (e.g. from the
 		// external KubernetesImages page). Wait for the manifest list so the
 		// dropdown reflects the selection, then open the modal and load it.
-		loadManifests().then(() => {
-			const yamlFile = getParam('yaml_file')
+		loadCatalog().then(() => {
+			// Deep links: ?yaml_file=<name>[&file=<path>] (the catalog page, the
+			// external image pages) or ?notebook=<path>&kernel=<name> (Open in
+			// Jupyter from a notebook in Files).
+			let yamlFile = getParam('yaml_file')
+			let file = getParam('file')
+			const notebook = getParam('notebook')
+			if (!yamlFile && notebook) {
+				yamlFile = imageForKernel(getParam('kernel'))
+				file = notebook
+				if (!yamlFile) { alertError(t(APP, 'No notebook image is available.')); return }
+			}
 			if (!yamlFile) return
-			const file = getParam('file')
-			$('#yaml_file').value = yamlFile
-			openModal()
-			loadYaml(yamlFile).then(() => {
+			openModal(false)
+			selectImage(yamlFile).then(() => {
 				if (file) $('#file_input').value = file
 			})
 		})
