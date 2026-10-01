@@ -34,7 +34,7 @@ $card = static function (array $e) use ($l, $_): void { ?>
 		<p class="pods-catalog-error"><?php p($l->t('The image library could not be read: %s', [$_['error']])); ?></p>
 	<?php } ?>
 	<?php if ($featured !== []) { ?>
-		<h3 class="pods-catalog-heading"><?php p($l->t('Start here')); ?></h3>
+		<h3 class="pods-catalog-heading"><?php p($l->t('Featured')); ?></h3>
 		<div class="pods-gallery-grid">
 			<?php foreach ($featured as $e) { $card($e); } ?>
 		</div>

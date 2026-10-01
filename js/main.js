@@ -686,7 +686,7 @@
 			const featured = catalog.filter((e) => e.featured !== null && e.featured !== undefined)
 				.sort((a, b) => a.featured - b.featured)
 			if (featured.length) {
-				html += '<h3 class="pods-catalog-heading">' + esc(t(APP, 'Start here')) + '</h3>'
+				html += '<h3 class="pods-catalog-heading">' + esc(t(APP, 'Featured')) + '</h3>'
 					+ '<div class="pods-gallery-grid">' + featured.map(card).join('') + '</div>'
 			}
 		}

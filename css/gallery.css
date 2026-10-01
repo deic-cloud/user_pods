@@ -179,7 +179,7 @@ span.pods-card-icon {
 	width: 14px;
 	height: 14px;
 	margin-left: 3px;
-	vertical-align: -1px;
+	vertical-align: -2px;
 	background-color: currentColor;
 	-webkit-mask: url(../img/open-in-new.svg) center / contain no-repeat;
 	mask: url(../img/open-in-new.svg) center / contain no-repeat;
