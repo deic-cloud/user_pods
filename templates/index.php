@@ -40,7 +40,6 @@
 						<input id="pods-gallery-search" type="search" placeholder="<?php p($l->t('Search images')); ?>"
 							aria-label="<?php p($l->t('Search images')); ?>">
 						<div id="pods-gallery-list"></div>
-						<p class="pods-gallery-more"><a href="<?php p(\OCP\Server::get(\OCP\IURLGenerator::class)->linkToRoute('user_pods.page.catalog')); ?>" target="_blank" rel="noopener"><?php p($l->t('All images on one page')); ?></a></p>
 					</div>
 					<div id="newpod" class="pods-hidden">
 				<a id="pods-gallery-back" href="#" class="pods-gallery-back">&larr; <?php p($l->t('All images')); ?></a>

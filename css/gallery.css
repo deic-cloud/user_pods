@@ -82,7 +82,7 @@ button.pods-card.pods-card:focus-visible {
 	box-sizing: border-box;
 	max-width: 1100px;
 	margin: 16px auto 0;
-	max-height: calc(100vh - 170px);
+	max-height: calc(100vh - 110px);
 	overflow-y: auto;
 	padding: 20px 24px;
 	border-radius: var(--border-radius-large, 10px);
@@ -118,13 +118,8 @@ button.pods-card .pods-card-summary {
 	display: block;
 }
 
-.pods-gallery-none,
-.pods-gallery-more {
+.pods-gallery-none {
 	color: var(--color-text-maxcontrast);
-}
-
-.pods-gallery-more a {
-	text-decoration: underline;
 }
 
 .pods-gallery-back {

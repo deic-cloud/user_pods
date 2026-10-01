@@ -468,10 +468,8 @@
 }
 
 #pod_type {
-	position: absolute;
-	bottom: 29px;
-	right: 12px;
-	width: fit-content;
+	padding-left: 1.5%;
+	padding-top: 1%;
 }
 
 #pod_type label {

@@ -54,6 +54,8 @@ class PageController extends Controller {
 		]);
 		$response->setHeaderTitle($this->l->t('Containers'));
 		$response->setHeaderDetails($this->l->t('Images you can run next to your data'));
+		// No instance footer (slogan, sign-up link) on this page.
+		$response->setFooterVisible(false);
 		return $response;
 	}
 }

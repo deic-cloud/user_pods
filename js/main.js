@@ -57,7 +57,8 @@
 
 	// Minimal, safe markdown -> HTML for the manifest .md description.
 	function renderMarkdown(md) {
-		const lines = String(md || '').split('\n')
+		// &colon; is how the .md files keep GitHub from linking a URL; show it as ':'.
+		const lines = String(md || '').replace(/&colon;/g, ':').split('\n')
 		let html = ''
 		let inList = false
 		let inCode = false
@@ -395,7 +396,13 @@
 
 	// The New container dialog has two views: the gallery of images, and the
 	// launch form for the chosen one.
+	function setTitle(imageTitle) {
+		const h = $('#pods-modal-title')
+		if (h) h.textContent = t(APP, 'New container') + (imageTitle ? ': ' + imageTitle : '')
+	}
+
 	function showGallery() {
+		setTitle('')
 		show($('#pods-gallery'), true)
 		show($('#newpod'), false)
 		const search = $('#pods-gallery-search')
@@ -684,6 +691,8 @@
 	}
 
 	function selectImage(file) {
+		const entry = catalog.find((e) => e.file === file)
+		setTitle(entry ? entry.title : file.replace(/\.yaml$/, ''))
 		addOption(file)
 		$('#yaml_file').value = file
 		showForm()
