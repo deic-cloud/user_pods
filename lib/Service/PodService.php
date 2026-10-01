@@ -405,6 +405,7 @@ class PodService {
 	public static function categoryIcon(string $category): string {
 		$c = strtolower($category);
 		$keys = [
+			'physics' => ['physics', 'hep', 'cern', 'lhc'],
 			'notebook' => ['notebook', 'jupyter', 'science', 'math'],
 			'learning' => ['learning', 'machine', 'gpu', 'neural'],
 			'batch' => ['batch', 'job', 'pipeline'],

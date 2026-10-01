@@ -122,15 +122,12 @@ button.pods-card .pods-card-summary {
 	color: var(--color-text-maxcontrast);
 }
 
-.pods-gallery-back {
+/* A plain link, like "YAML source" beside it. */
+.pods-gallery-back.pods-gallery-back {
 	display: inline-block;
-	margin-bottom: 10px;
-	color: var(--color-text-maxcontrast);
-}
-
-.pods-gallery-back:hover,
-.pods-gallery-back:focus-visible {
-	color: var(--color-main-text);
+	margin: 0 12px 10px 0;
+	color: var(--color-primary-element);
+	text-decoration: underline;
 }
 
 #pods-advanced {
@@ -172,4 +169,5 @@ span.pods-card-icon {
 .pods-icon-storage { --pods-icon: url(../img/categories/storage.svg); }
 .pods-icon-media { --pods-icon: url(../img/categories/media.svg); }
 .pods-icon-tools { --pods-icon: url(../img/categories/tools.svg); }
+.pods-icon-physics { --pods-icon: url(../img/categories/physics.svg); }
 .pods-icon-other { --pods-icon: url(../img/categories/other.svg); }
