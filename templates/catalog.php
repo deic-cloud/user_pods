@@ -10,7 +10,14 @@ foreach ($_['catalog'] as $e) {
 }
 $card = static function (array $e) use ($l, $_): void { ?>
 	<div class="pods-card">
-		<h4 class="pods-card-title"><?php p($e['title']); ?></h4>
+		<div class="pods-card-head">
+			<?php if (str_starts_with($e['icon'], 'data:image/')) { ?>
+				<img class="pods-card-icon" src="<?php p($e['icon']); ?>" alt="">
+			<?php } else { ?>
+				<span class="pods-card-icon pods-icon-<?php p($e['icon_key']); ?>" aria-hidden="true"></span>
+			<?php } ?>
+			<h4 class="pods-card-title"><?php p($e['title']); ?></h4>
+		</div>
 		<p class="pods-card-summary"><?php p($e['summary']); ?></p>
 		<div class="pods-card-foot">
 			<?php if ($e['restricted']) { ?>

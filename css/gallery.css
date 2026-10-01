@@ -142,3 +142,34 @@ button.pods-card .pods-card-summary {
 	margin-bottom: 6px;
 	color: var(--color-text-maxcontrast);
 }
+
+/* Card icons: the image's own (an <img>) or its category's, drawn in the
+   theme's primary colour through a mask (img/categories, Material Design Icons). */
+.pods-card-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.pods-card-icon {
+	flex: 0 0 32px;
+	width: 32px;
+	height: 32px;
+	object-fit: contain;
+}
+
+span.pods-card-icon {
+	background-color: var(--color-primary-element);
+	-webkit-mask: var(--pods-icon) center / contain no-repeat;
+	mask: var(--pods-icon) center / contain no-repeat;
+}
+.pods-icon-notebook { --pods-icon: url(../img/categories/notebook.svg); }
+.pods-icon-linux { --pods-icon: url(../img/categories/linux.svg); }
+.pods-icon-learning { --pods-icon: url(../img/categories/learning.svg); }
+.pods-icon-batch { --pods-icon: url(../img/categories/batch.svg); }
+.pods-icon-web { --pods-icon: url(../img/categories/web.svg); }
+.pods-icon-database { --pods-icon: url(../img/categories/database.svg); }
+.pods-icon-storage { --pods-icon: url(../img/categories/storage.svg); }
+.pods-icon-media { --pods-icon: url(../img/categories/media.svg); }
+.pods-icon-tools { --pods-icon: url(../img/categories/tools.svg); }
+.pods-icon-other { --pods-icon: url(../img/categories/other.svg); }

@@ -363,11 +363,66 @@ class PodService {
 				'md' => $bodies[$name . '#md'] ?? '',
 			];
 		}
+		$this->addIcons($lib);
 		if ($lib !== []) {
 			$cache->set('library', $lib, self::LIBRARY_TTL);
 			$cache->set('library_stale', $lib, 86400);
 		}
 		return $lib;
+	}
+
+	private const ICON_TYPES = ['svg' => 'image/svg+xml', 'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp'];
+	private const ICON_MAX_BYTES = 100 * 1024;
+
+	/**
+	 * Fetch the catalog/icon of each manifest that has one - a path in the
+	 * library, e.g. icons/immich.svg - and keep it as a data: URI. Inlined
+	 * because the page's content policy only allows images from this server,
+	 * and so a page view costs no request to the library. Only image types by
+	 * extension, at most ICON_MAX_BYTES; anything else is ignored.
+	 */
+	private function addIcons(array &$lib): void {
+		$urls = [];
+		foreach ($lib as $name => $m) {
+			$path = trim((string)($m['annotations']['catalog/icon'] ?? ''), " \t/");
+			$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+			if ($path !== '' && !str_contains($path, '..') && isset(self::ICON_TYPES[$ext])) {
+				$urls[$name] = $this->rawManifestsURL . implode('/', array_map('rawurlencode', explode('/', $path)));
+			}
+		}
+		foreach ($this->fetchAll($urls) as $name => $body) {
+			$ext = strtolower(pathinfo((string)$lib[$name]['annotations']['catalog/icon'], PATHINFO_EXTENSION));
+			if ($body !== '' && strlen($body) <= self::ICON_MAX_BYTES) {
+				$lib[$name]['icon'] = 'data:' . self::ICON_TYPES[$ext] . ';base64,' . base64_encode($body);
+			}
+		}
+	}
+
+	/**
+	 * The built-in icon for a category (img/categories/<key>.svg), by words in
+	 * its name, so close variants of a name get the same icon; 'other' if none.
+	 */
+	public static function categoryIcon(string $category): string {
+		$c = strtolower($category);
+		$keys = [
+			'notebook' => ['notebook', 'jupyter', 'science', 'math'],
+			'learning' => ['learning', 'machine', 'gpu', 'neural'],
+			'batch' => ['batch', 'job', 'pipeline'],
+			'web' => ['web', 'http', 'site'],
+			'database' => ['database', 'sql', 'db'],
+			'storage' => ['storage', 'object', 's3', 'file server', 'file'],
+			'media' => ['media', 'photo', 'video', 'music', 'book'],
+			'tools' => ['develop', 'tool', 'utilit', 'code'],
+			'linux' => ['linux', 'ubuntu', 'base', 'shell', 'terminal'],
+		];
+		foreach ($keys as $key => $words) {
+			foreach ($words as $w) {
+				if (str_contains($c, $w)) {
+					return $key;
+				}
+			}
+		}
+		return 'other';
 	}
 
 	/**
@@ -442,7 +497,9 @@ class PodService {
 				'featured' => is_numeric($featured) ? (int)$featured : null,
 				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
 				'restricted' => ($l['group'] ?? '') !== '' || ($l['domain'] ?? '') !== '' || ($l['user'] ?? '') !== '',
+				'icon' => (string)($m['icon'] ?? ''),
 			];
+			$entry['icon_key'] = self::categoryIcon($entry['category']);
 			if ($uid !== null) {
 				$entry['allowed'] = $this->mayLaunch($uid, $l);
 			}

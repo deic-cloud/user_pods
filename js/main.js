@@ -653,10 +653,18 @@
 		})
 	}
 
+	// The image's own icon (catalog/icon, inlined by the server) or its category's.
+	function cardIcon(e) {
+		if (e.icon && /^data:image\//.test(e.icon)) {
+			return '<img class="pods-card-icon" src="' + esc(e.icon) + '" alt="">'
+		}
+		return '<span class="pods-card-icon pods-icon-' + esc(e.icon_key || 'other') + '" aria-hidden="true"></span>'
+	}
+
 	function card(e) {
 		const off = e.allowed === false
 		return '<button type="button" class="pods-card' + (off ? ' pods-card-disabled' : '') + '" data-file="' + esc(e.file) + '">'
-			+ '<span class="pods-card-title">' + esc(e.title) + '</span>'
+			+ '<span class="pods-card-head">' + cardIcon(e) + '<span class="pods-card-title">' + esc(e.title) + '</span></span>'
 			+ '<span class="pods-card-summary">' + esc(e.summary) + '</span>'
 			+ (e.restricted ? '<span class="pods-card-foot"><span class="pods-card-badge">'
 				+ esc(off ? t(APP, 'Restricted') : t(APP, 'Restricted – you have access')) + '</span></span>' : '')
