@@ -406,7 +406,8 @@ class PodService {
 		$c = strtolower($category);
 		$keys = [
 			'physics' => ['physics', 'hep', 'cern', 'lhc'],
-			'notebook' => ['notebook', 'jupyter', 'science', 'math'],
+			'science' => ['scientific', 'science', 'math'],
+			'notebook' => ['notebook', 'jupyter'],
 			'learning' => ['learning', 'machine', 'gpu', 'neural'],
 			'batch' => ['batch', 'job', 'pipeline'],
 			'web' => ['web', 'http', 'site'],
@@ -491,7 +492,8 @@ class PodService {
 				'title' => trim((string)($a['catalog/title'] ?? '')) ?: self::titleFromFile($file),
 				'category' => trim((string)($a['catalog/category'] ?? '')) ?: 'Other',
 				'summary' => trim((string)($a['catalog/summary'] ?? '')) ?: self::summaryFromMd($m['md']),
-				'featured' => is_numeric($featured) ? (int)$featured : null,
+				// featured: 1, 2, … (0 or nothing = not featured)
+				'featured' => is_numeric($featured) && (int)$featured > 0 ? (int)$featured : null,
 				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
 				'restricted' => ($l['group'] ?? '') !== '' || ($l['domain'] ?? '') !== '' || ($l['user'] ?? '') !== '',
 				'icon' => (string)($m['icon'] ?? ''),

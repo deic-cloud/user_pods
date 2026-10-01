@@ -169,5 +169,18 @@ span.pods-card-icon {
 .pods-icon-storage { --pods-icon: url(../img/categories/storage.svg); }
 .pods-icon-media { --pods-icon: url(../img/categories/media.svg); }
 .pods-icon-tools { --pods-icon: url(../img/categories/tools.svg); }
+.pods-icon-science { --pods-icon: url(../img/categories/science.svg); }
 .pods-icon-physics { --pods-icon: url(../img/categories/physics.svg); }
 .pods-icon-other { --pods-icon: url(../img/categories/other.svg); }
+
+/* External-link mark (opens in a new tab): Material Design Icons open-in-new. */
+.pods-external {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	margin-left: 3px;
+	vertical-align: -1px;
+	background-color: currentColor;
+	-webkit-mask: url(../img/open-in-new.svg) center / contain no-repeat;
+	mask: url(../img/open-in-new.svg) center / contain no-repeat;
+}

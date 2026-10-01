@@ -363,12 +363,11 @@
 	padding-inline-end: 10px;
 }
 
-/* Gap between the SSH URL and the allowed-IPs input next to it. */
+/* The allowed-IPs input and its +My IP button. */
 #podstable .expanded-row-ssh-ip {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	margin-inline-start: 16px;
 }
 
 #podstable .expanded-table {
@@ -572,4 +571,10 @@
 
 input.keep_ports[type="checkbox"] {
 	margin-bottom: 4px;
+}
+
+/* Room for a couple of addresses. */
+#podstable .expanded-row-ssh-ip input.allowed_ip {
+	width: 280px;
+	max-width: 60vw;
 }

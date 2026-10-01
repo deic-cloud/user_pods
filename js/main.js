@@ -190,8 +190,12 @@
 		rows += row('age:', esc(c.age))
 		if (c.ssh_url) {
 			rows += '<tr><td class="expanded-column-name">ssh access:</td>'
-				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-url"><a href="' + esc(c.ssh_url) + '">' + esc(c.ssh_url) + '</a></span>'
-				+ '<span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(c.allowed_ips || '') + '" />'
+				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-url"><a href="' + esc(c.ssh_url) + '">' + esc(c.ssh_url) + '</a></span></td></tr>'
+		}
+		// Who may reach the container's SSH and web ports (both firewalled to these addresses).
+		if (c.ssh_url || c.url) {
+			rows += '<tr><td class="expanded-column-name">access from:</td>'
+				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(c.allowed_ips || '') + '" />'
 				+ '<label class="button add_current_ip" title="' + esc(t(APP, 'Add your current IP')) + '">+My IP</label></span></td></tr>'
 		}
 		if (extraPorts) {
@@ -486,7 +490,7 @@
 				show($('#cancel'), true)
 				const ghUrl = d.manifest_url.replace(/^https:\/\/raw\.githubusercontent\.com\/deic-dk\/pod_manifests\/main\//,
 					'https://github.com/deic-dk/pod_manifests/blob/main/')
-				$('#links').innerHTML = '<span><a href="' + esc(ghUrl) + '" target="_blank" rel="noreferrer noopener">YAML source</a></span>'
+				$('#links').innerHTML = '<span><a href="' + esc(ghUrl) + '" target="_blank" rel="noreferrer noopener" title="' + esc(t(APP, 'Opens in a new tab')) + '">YAML source<span class="pods-external" aria-hidden="true"></span></a></span>'
 				$('#description').innerHTML = renderMarkdown(d.manifest_info)
 				show($('#description'), true)
 
