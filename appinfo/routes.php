@@ -10,7 +10,6 @@ return [
 
 		// Pod management — thin JSON API over the sciencedata_kubernetes host service.
 		['name' => 'api#containers',  'url' => '/api/containers',      'verb' => 'GET'],
-		['name' => 'api#manifests',   'url' => '/api/manifests',       'verb' => 'GET'],
 		['name' => 'api#catalog',     'url' => '/api/catalog',         'verb' => 'GET'],
 		['name' => 'api#manifest',    'url' => '/api/manifest',        'verb' => 'GET'],
 		['name' => 'api#create',      'url' => '/api/pod',             'verb' => 'POST'],

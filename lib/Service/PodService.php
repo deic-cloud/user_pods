@@ -174,7 +174,7 @@ class PodService {
 	}
 
 	/** Available manifest filenames (*.yaml) from the GitHub manifest library. */
-	public function getManifests(): array {
+	private function getManifests(): array {
 		$json = $this->httpGet($this->manifestsURL);
 		$arr = json_decode($json, true);
 		if (!is_array($arr)) {
@@ -476,8 +476,7 @@ class PodService {
 	 * The image catalog: one entry per listed manifest, from its catalog/*
 	 * annotations, with fallbacks (title from the file name, summary from the
 	 * first paragraph of its description, category "Other") for manifests
-	 * without them. catalog/hidden manifests are left out (still launchable by
-	 * URL). With $uid, each entry says whether that user may launch it.
+	 * without them. With $uid, each entry says whether that user may launch it.
 	 *
 	 * @return list<array<string, mixed>>
 	 */
@@ -485,9 +484,6 @@ class PodService {
 		$out = [];
 		foreach ($this->library() as $file => $m) {
 			$a = $m['annotations'];
-			if (in_array(strtolower(trim((string)($a['catalog/hidden'] ?? ''))), ['true', '1', 'yes'], true)) {
-				continue;
-			}
 			$l = $m['labels'];
 			$featured = trim((string)($a['catalog/featured'] ?? ''));
 			$entry = [

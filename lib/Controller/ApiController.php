@@ -61,12 +61,6 @@ class ApiController extends Controller {
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function manifests(): JSONResponse {
-		return $this->host(fn () => $this->pods->getManifests());
-	}
-
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
 	public function catalog(): JSONResponse {
 		return $this->host(fn () => $this->pods->getCatalog($this->uid()));
 	}
