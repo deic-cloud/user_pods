@@ -164,7 +164,7 @@
 
 	function renderViewCell(c) {
 		if ((c.status || '').includes('Running') && c.url) {
-			return '<td><div data-column="view"><span><a href="' + esc(c.url) + '">' + esc(c.url) + '</a></span></div></td>'
+			return '<td><div data-column="view"><span><a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.url) + '</a></span></div></td>'
 		}
 		const text = (c.status || '').includes('Running') ? '—' : t(APP, 'Starting…')
 		return '<td><div data-column="view"><span>' + text + '</span></div></td>'
