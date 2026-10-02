@@ -64,6 +64,7 @@
 					<p class="newpod-placeholder-text"><?php p($l->t('Choose an image from the drop-down')); ?></p>
 				</div>
 				<div id="newpod-spinner" class="icon-loading" hidden></div>
+				<div id="pods-reuse" class="pods-hidden"></div>
 				<div id="description" class="pods-hidden"></div>
 				<div id="ssh" class="pods-hidden">
 					<textarea id="public_key" placeholder="<?php p($l->t('Public SSH key')); ?>"

@@ -742,7 +742,43 @@
 		return base
 	}
 
+	// A running container of this image, of this user, whose web address carries
+	// its Jupyter token: { name, origin, token, lab }, or null.
+	function runningServerFor(entry) {
+		if (!entry || !entry.name) return null
+		const uid = (OC.getCurrentUser && OC.getCurrentUser().uid) || ''
+		const base = entry.name + '-' + uid.replace(/[@._]/g, '-')
+		for (const tr of $all('#podstable tr.simple-row')) {
+			const name = tr.getAttribute('data-pod-name') || ''
+			if (name !== base && !(name.startsWith(base + '-') && /^\d$/.test(name.slice(base.length + 1)))) continue
+			const status = ($('div[data-column="status"] span', tr) || {}).textContent || ''
+			const a = $('div[data-column="view"] a', tr)
+			if (!/Running/.test(status) || !a) continue
+			try {
+				const u = new URL(a.getAttribute('href'))
+				const token = u.searchParams.get('token')
+				if (token) return { name, origin: u.origin, token, lab: /\/lab/.test(u.pathname) || /jupyterlab/i.test(entry.file) }
+			} catch (e) { /* not a URL */ }
+		}
+		return null
+	}
+
+	// Open in Jupyter with a server of the right kind already running: offer to
+	// open the notebook there instead of starting another container.
+	function offerRunningServer(file, notebookPath) {
+		const box = $('#pods-reuse')
+		const server = runningServerFor(catalog.find((e) => e.file === file))
+		if (!box || !server) return
+		const path = String(notebookPath).replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')
+		const href = server.origin + (server.lab ? '/lab/tree/' : '/notebooks/') + path + '?token=' + encodeURIComponent(server.token)
+		box.innerHTML = '<p>' + esc(t(APP, 'You already have this notebook server running: {name}.', { name: server.name })) + '</p>'
+			+ '<a class="button primary" href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(t(APP, 'Open the notebook there')) + '</a>'
+			+ ' <span class="pods-reuse-or">' + esc(t(APP, 'or launch a new one.')) + '</span>'
+		show(box, true)
+	}
+
 	function selectImage(file) {
+		show($('#pods-reuse'), false)
 		const entry = catalog.find((e) => e.file === file)
 		const podName = podNameFor(entry)
 		setTitle((entry ? entry.title : file.replace(/\.yaml$/, '')) + (podName ? ' (' + podName + ')' : ''))
@@ -825,10 +861,10 @@
 			}
 		})
 
-		// Honour a ?yaml_file=<name>[&file=<path>] deep link (e.g. from the
-		// external KubernetesImages page). Wait for the manifest list so the
-		// dropdown reflects the selection, then open the modal and load it.
-		loadCatalog().then(() => {
+		// Deep links wait for the catalog and the list of containers (to offer a
+		// running notebook server), then open the dialog on the image.
+		const containersLoaded = getContainers()
+		Promise.all([loadCatalog(), containersLoaded]).then(() => {
 			// Deep links: ?yaml_file=<name>[&file=<path>] (the catalog page, the
 			// external image pages) or ?notebook=<path>&kernel=<name> (Open in
 			// Jupyter from a notebook in Files).
@@ -844,9 +880,9 @@
 			openModal(false)
 			selectImage(yamlFile).then(() => {
 				if (file) $('#file_input').value = file
+				if (notebook) offerRunningServer(yamlFile, notebook)
 			})
 		})
-		getContainers()
 	}
 
 	if (document.readyState === 'loading') {

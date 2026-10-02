@@ -184,3 +184,19 @@ span.pods-card-icon {
 	-webkit-mask: url(../img/open-in-new.svg) center / contain no-repeat;
 	mask: url(../img/open-in-new.svg) center / contain no-repeat;
 }
+
+/* Open in Jupyter with a matching server already running. */
+#pods-reuse {
+	margin: 4px 0 12px;
+	padding: 10px 14px;
+	border: 1px solid var(--color-primary-element);
+	border-radius: var(--border-radius-large, 10px);
+}
+
+#pods-reuse p {
+	margin: 0 0 8px;
+}
+
+.pods-reuse-or {
+	color: var(--color-text-maxcontrast);
+}
