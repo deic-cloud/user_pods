@@ -163,6 +163,7 @@ class PodService {
 				$c['ssh_url'] = '';
 			}
 			unset($c['ssh_port'], $c['ssh_username']);
+			$c['age_seconds'] = (int)($c['age'] ?? 0);
 			if (!empty($c['age'])) {
 				$c['age'] = floor((int)$c['age'] / 3600) . gmdate(':i:s', (int)$c['age'] % 3600);
 			}
@@ -497,6 +498,8 @@ class PodService {
 				// featured: 1, 2, … (0 or nothing = not featured)
 				'featured' => is_numeric($featured) && (int)$featured > 0 ? (int)$featured : null,
 				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
+				// the container supplies its address's path (e.g. a Jupyter token) after it starts
+				'wait_token' => in_array(strtolower(trim((string)($a['catalog/wait-for-token'] ?? ''))), ['1', 'true', 'yes'], true),
 				'restricted' => ($l['group'] ?? '') !== '' || ($l['domain'] ?? '') !== '' || ($l['user'] ?? '') !== '',
 				'icon' => (string)($m['icon'] ?? ''),
 			];

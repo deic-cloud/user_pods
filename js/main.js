@@ -28,7 +28,6 @@
 	let root = null // #app-content-kubernetes
 	let clientIp = ''
 	const xhrPool = new Set()
-	let runPodTimeouts = []
 	let setAllowedIPsBusy = false
 
 	// ---- small helpers ---------------------------------------------------
@@ -162,7 +161,36 @@
 		return m ? m[1] : ''
 	}
 
+	// The catalog entry of a container's image: its name is the image's
+	// metadata.name, a dash and the owner with @ . _ as dashes (-1 … -9 if taken).
+	function entryForPod(c) {
+		const owner = String(c.owner || '').replace(/[@._]/g, '-')
+		const name = String(c.pod_name || '')
+		return catalog.find((e) => {
+			if (!e.name) return false
+			const base = e.name + '-' + owner
+			return name === base || (name.startsWith(base + '-') && /^\d$/.test(name.slice(base.length + 1)))
+		})
+	}
+
+	// run_pod waits this long for a container to supply its address's path.
+	const TOKEN_WAIT_SECONDS = 300
+
+	// Running, its image says a token is coming (catalog/wait-for-token), and
+	// the address does not have it yet: show no link, so nobody opens the
+	// tokenless one. After TOKEN_WAIT_SECONDS the bare address is shown anyway.
+	function waitingForToken(c) {
+		if (!(c.status || '').includes('Running')) return false
+		const e = entryForPod(c)
+		if (!e || !e.wait_token) return false
+		if (c.url && !/:\d+\/?$/.test(c.url)) return false
+		return Number(c.age_seconds || 0) < TOKEN_WAIT_SECONDS
+	}
+
 	function renderViewCell(c) {
+		if (waitingForToken(c)) {
+			return '<td><div data-column="view"><span>' + esc(t(APP, 'Starting…')) + '</span></div></td>'
+		}
 		if ((c.status || '').includes('Running') && c.url) {
 			return '<td><div data-column="view"><span><a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.url) + '</a></span></div></td>'
 		}
@@ -300,6 +328,7 @@
 					if (tr) wireRow(tr, c)
 				})
 				updateContainerCount()
+				scheduleRefresh(data)
 				$all('#podstable #fileList tr.simple-row').forEach((tr) => {
 					if (expandedNames.indexOf(tr.getAttribute('data-pod-name')) !== -1) {
 						toggleExpanded($('.expand-view', tr))
@@ -332,8 +361,8 @@
 			.then((json) => {
 				if (hostOk(json) && json.data && json.data.name) {
 					closeModal()
+					refreshes = 0
 					getContainers()
-					watchNewPod(json.data.name)
 				} else {
 					alertError(t(APP, 'Create container: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 				}
@@ -341,27 +370,25 @@
 			.catch((e) => alertError(t(APP, 'Create container: Something went wrong. ') + e))
 	}
 
-	// After a launch, refresh the list quietly every 10 s until the new container
-	// runs and its web address has its path (e.g. Jupyter's ?token=…, which
-	// arrives after the container starts), for at most the 5 minutes run_pod
-	// waits for it.
-	function watchNewPod(podName) {
-		runPodTimeouts.forEach(clearTimeout)
-		runPodTimeouts = []
-		let tries = 0
-		const tick = () => {
-			tries++
-			getContainers(() => {
-				const tr = $('#podstable tr.simple-row[data-pod-name="' + cssEscape(podName) + '"]')
-				const status = tr ? (($('div[data-column="status"] span', tr) || {}).textContent || '') : ''
-				const link = tr ? $('div[data-column="view"] a', tr) : null
-				const href = link ? link.getAttribute('href') : ''
-				// done when running and either without a web address or with its path
-				const complete = /Running/.test(status) && (!href || !/:\d+\/?$/.test(href))
-				if (!complete && tries < 30) runPodTimeouts = [setTimeout(tick, 10000)]
-			}, true)
-		}
-		runPodTimeouts = [setTimeout(tick, 10000)]
+	// While a container is starting, or waiting for its token, refresh the list
+	// quietly every 10 s (at most 60 times in a row) - after a launch, and also
+	// after a reload of the page. Not while the user is typing in the list.
+	let refreshTimer = null
+	let refreshes = 0
+
+	function pending(list) {
+		return list.some((c) => !(c.status || '').includes('Running') || waitingForToken(c))
+	}
+
+	function scheduleRefresh(list) {
+		clearTimeout(refreshTimer)
+		if (!pending(list) || refreshes >= 60) { refreshes = 0; return }
+		refreshTimer = setTimeout(() => {
+			refreshes++
+			const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('#podstable input')
+			if (typing) { scheduleRefresh(list); return }
+			getContainers(null, true)
+		}, 10000)
 	}
 
 	function setAllowedIPs(podName, ips) {
@@ -863,8 +890,10 @@
 
 		// Deep links wait for the catalog and the list of containers (to offer a
 		// running notebook server), then open the dialog on the image.
-		const containersLoaded = getContainers()
-		Promise.all([loadCatalog(), containersLoaded]).then(() => {
+		// The list needs the catalog (which images wait for a token).
+		const catalogLoaded = loadCatalog()
+		const containersLoaded = catalogLoaded.catch(() => {}).then(() => getContainers())
+		Promise.all([catalogLoaded, containersLoaded]).then(() => {
 			// Deep links: ?yaml_file=<name>[&file=<path>] (the catalog page, the
 			// external image pages) or ?notebook=<path>&kernel=<name> (Open in
 			// Jupyter from a notebook in Files).
