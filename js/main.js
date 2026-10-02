@@ -123,6 +123,10 @@
 	}
 
 	function apiGet(path, loadingText) {
+		if (loadingText === null) {
+			// quiet: no "Working…" overlay (background refreshes)
+			return fetch(url(path), { headers: { 'OCS-APIRequest': 'true', requesttoken: OC.requestToken } }).then((r) => r.json())
+		}
 		const token = loadingStart(loadingText)
 		return fetch(url(path), {
 			headers: { 'OCS-APIRequest': 'true', requesttoken: OC.requestToken },
@@ -277,8 +281,8 @@
 		}
 	}
 
-	function getContainers(callback) {
-		return apiGet('api/containers', 'Retrieving table data…')
+	function getContainers(callback, quiet = false) {
+		return apiGet('api/containers', quiet ? null : 'Retrieving table data…')
 			.then((data) => {
 				if (!Array.isArray(data)) {
 					// A non-array response is an error body {status:'error',data:{message}}
@@ -329,13 +333,35 @@
 				if (hostOk(json) && json.data && json.data.name) {
 					closeModal()
 					getContainers()
-					runPodTimeouts.forEach(clearTimeout)
-					runPodTimeouts = [10000, 30000, 60000].map((ms) => setTimeout(getContainers, ms))
+					watchNewPod(json.data.name)
 				} else {
 					alertError(t(APP, 'Create container: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 				}
 			})
 			.catch((e) => alertError(t(APP, 'Create container: Something went wrong. ') + e))
+	}
+
+	// After a launch, refresh the list quietly every 10 s until the new container
+	// runs and its web address has its path (e.g. Jupyter's ?token=…, which
+	// arrives after the container starts), for at most the 5 minutes run_pod
+	// waits for it.
+	function watchNewPod(podName) {
+		runPodTimeouts.forEach(clearTimeout)
+		runPodTimeouts = []
+		let tries = 0
+		const tick = () => {
+			tries++
+			getContainers(() => {
+				const tr = $('#podstable tr.simple-row[data-pod-name="' + cssEscape(podName) + '"]')
+				const status = tr ? (($('div[data-column="status"] span', tr) || {}).textContent || '') : ''
+				const link = tr ? $('div[data-column="view"] a', tr) : null
+				const href = link ? link.getAttribute('href') : ''
+				// done when running and either without a web address or with its path
+				const complete = /Running/.test(status) && (!href || !/:\d+\/?$/.test(href))
+				if (!complete && tries < 30) runPodTimeouts = [setTimeout(tick, 10000)]
+			}, true)
+		}
+		runPodTimeouts = [setTimeout(tick, 10000)]
 	}
 
 	function setAllowedIPs(podName, ips) {
@@ -702,9 +728,24 @@
 		listEl.innerHTML = html
 	}
 
+	// The name run_pod will give the container: the manifest's metadata.name,
+	// a dash and the user id with @ . _ as dashes, and -1 … -9 if that is taken.
+	function podNameFor(entry) {
+		if (!entry || !entry.name) return ''
+		const uid = (OC.getCurrentUser && OC.getCurrentUser().uid) || ''
+		const base = entry.name + '-' + uid.replace(/[@._]/g, '-')
+		const taken = $all('#podstable tr.simple-row').map((tr) => tr.getAttribute('data-pod-name'))
+		if (!taken.includes(base)) return base
+		for (let i = 1; i <= 9; i++) {
+			if (!taken.includes(base + '-' + i)) return base + '-' + i
+		}
+		return base
+	}
+
 	function selectImage(file) {
 		const entry = catalog.find((e) => e.file === file)
-		setTitle(entry ? entry.title : file.replace(/\.yaml$/, ''))
+		const podName = podNameFor(entry)
+		setTitle((entry ? entry.title : file.replace(/\.yaml$/, '')) + (podName ? ' (' + podName + ')' : ''))
 		addOption(file)
 		$('#yaml_file').value = file
 		showForm()

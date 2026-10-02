@@ -358,6 +358,7 @@ class PodService {
 			}
 			$meta = $arr['metadata'] ?? [];
 			$lib[$name] = [
+				'name' => (string)($meta['name'] ?? ''),
 				'labels' => is_array($meta['labels'] ?? null) ? $meta['labels'] : [],
 				'annotations' => is_array($meta['annotations'] ?? null) ? $meta['annotations'] : [],
 				'md' => $bodies[$name . '#md'] ?? '',
@@ -489,6 +490,7 @@ class PodService {
 			$featured = trim((string)($a['catalog/featured'] ?? ''));
 			$entry = [
 				'file' => $file,
+				'name' => (string)($m['name'] ?? ''),
 				'title' => trim((string)($a['catalog/title'] ?? '')) ?: self::titleFromFile($file),
 				'category' => trim((string)($a['catalog/category'] ?? '')) ?: 'Other',
 				'summary' => trim((string)($a['catalog/summary'] ?? '')) ?: self::summaryFromMd($m['md']),
