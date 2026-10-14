@@ -536,6 +536,17 @@ class PodService {
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
 		string $peers = '', string $allowedIp = '', string $podType = ''): array {
+		// An image that writes into its mounted folder (NFS_RW: "yes" in the
+		// manifest) only works on a /storage/ mount: /files/ mounts are read-only.
+		// The dialog hides /files/ for such images; the API refuses it, so a
+		// direct call cannot start a pod that is bound to fail.
+		if ($mountRoot === 'files') {
+			$yamlFile = basename((string)(parse_url($yamlUrl, PHP_URL_PATH) ?: $yamlUrl));
+			$info = $this->checkManifest($uid, $yamlFile);
+			if (($info['nfs_rw'] ?? '') === 'yes') {
+				throw new PodHostException('This image writes to its mounted folder; mount a /storage/ folder, not /files/ (read-only).');
+			}
+		}
 		if ($mountRoot === 'storage' && $mountPath !== '') {
 			$this->createStorageDir($uid, $mountPath);
 		}
