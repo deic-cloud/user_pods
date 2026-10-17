@@ -61,7 +61,8 @@ class PageController extends Controller {
 			'pod' => (string)($res['pod'] ?? ''),
 			'file' => (string)($res['file'] ?? ''),
 			'image' => (string)($res['image'] ?? ''),
-			'containers_url' => $this->urlGenerator->linkToOCSRouteAbsolute('user_pods.api.containers'),
+			// the app's API is a plain route under index.php (not OCS)
+			'containers_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.api.containers'),
 			'pods_url' => $this->urlGenerator->linkToRoute('user_pods.page.index'),
 		]);
 	}

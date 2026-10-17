@@ -22,13 +22,18 @@
 			var api = <?php print_unescaped(json_encode($_['containers_url'])); ?>;
 			var started = Date.now();
 			function poll() {
-				fetch(api + '?format=json', { headers: { 'OCS-APIRequest': 'true', 'requesttoken': OC.requestToken }, credentials: 'same-origin' })
+				fetch(api, { headers: { 'OCS-APIRequest': 'true', 'requesttoken': OC.requestToken }, credentials: 'same-origin' })
 					.then(function (r) { return r.json(); })
 					.then(function (j) {
-						var list = (j && j.ocs && j.ocs.data) || [];
+						var list = Array.isArray(j) ? j : ((j && j.ocs && j.ocs.data) || []);
 						var c = list.filter(function (x) { return x.pod_name === pod; })[0];
-						if (c) { document.getElementById('run-status').textContent = pod + ': ' + (c.status || ''); }
-						if (c && /^Running/.test(c.status || '') && c.url) { location.href = c.url; return; }
+						if (c) {
+							var running = /^Running/.test(c.status || '');
+							document.getElementById('run-status').textContent = pod + ': ' + (running && !c.url
+								? <?php print_unescaped(json_encode($l->t('server is up, waiting for its address…'))); ?>
+								: (c.status || <?php print_unescaped(json_encode($l->t('starting…'))); ?>));
+							if (running && c.url) { location.href = c.url; return; }
+						}
 						if (Date.now() - started > 20 * 60 * 1000) { document.getElementById('run-manual').hidden = false; return; }
 						setTimeout(poll, 5000);
 					})
