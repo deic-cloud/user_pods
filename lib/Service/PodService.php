@@ -8,6 +8,7 @@ use OCA\UserPods\Exception\PodHostException;
 use OCP\Http\Client\IClientService;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
+use OCP\IGroupManager;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -26,6 +27,8 @@ class PodService {
 	private string $rawManifestsURL;
 	private string $getContainersPassword;
 	private int $maxPodsPerUser;
+	/** @var string[] */
+	private array $unlimitedUsers = [];
 
 	public function __construct(
 		IAppConfig $appConfig,
@@ -33,6 +36,7 @@ class PodService {
 		private GroupBridge $groups,
 		private LoggerInterface $logger,
 		private ICacheFactory $cacheFactory,
+		private ?IGroupManager $groupManager = null,
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
 		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
@@ -54,6 +58,24 @@ class PodService {
 		// side has no cap of its own beyond its pod-naming scheme, so this is where
 		// the limit is set and explained to the user.
 		$this->maxPodsPerUser = max(0, (int)$appConfig->getValueString('user_pods', 'maxPodsPerUser', '5'));
+		// Accounts the limit does not apply to (service accounts such as 'cloud'
+		// or 'batch'); administrators are always exempt.
+		$this->unlimitedUsers = array_values(array_filter(array_map('trim',
+			preg_split('/[\s,;]+/', $appConfig->getValueString('user_pods', 'unlimitedPodUsers', '')) ?: [])));
+	}
+
+	/** Does the per-user pod limit apply to this account? */
+	public function limitApplies(string $uid): bool {
+		if ($this->maxPodsPerUser <= 0 || in_array($uid, $this->unlimitedUsers, true)) {
+			return false;
+		}
+		try {
+			if ($this->groupManager !== null && $this->groupManager->isAdmin($uid)) {
+				return false;
+			}
+		} catch (\Throwable) {
+		}
+		return true;
 	}
 
 	public function getMaxPodsPerUser(): int {
@@ -545,7 +567,7 @@ class PodService {
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
 		string $peers = '', string $allowedIp = '', string $podType = ''): array {
-		if ($this->maxPodsPerUser > 0) {
+		if ($this->limitApplies($uid)) {
 			$running = count($this->getContainers($uid));
 			if ($running >= $this->maxPodsPerUser) {
 				throw new PodHostException(sprintf(

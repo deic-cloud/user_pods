@@ -60,6 +60,14 @@ class AdminForm implements IDeclarativeSettingsForm {
 					'default' => 5,
 				],
 				[
+					'id' => 'unlimitedPodUsers',
+					'title' => 'Users without a pod limit',
+					'description' => 'Account names the limit does not apply to, separated by commas (service accounts). Administrators are always exempt.',
+					'type' => DeclarativeSettingsTypes::TEXT,
+					'placeholder' => 'cloud, batch',
+					'default' => '',
+				],
+				[
 					'id' => 'manifestsURL',
 					'title' => 'Manifest library — listing API',
 					'description' => 'GitHub contents API URL used to list image manifests',
