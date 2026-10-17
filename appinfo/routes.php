@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 	'routes' => [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
+		['name' => 'page#run',   'url' => '/run', 'verb' => 'GET'],
 		// The image catalog as a public page, with Launch links into the app.
 		['name' => 'page#catalog', 'url' => '/catalog', 'verb' => 'GET'],
 
@@ -13,6 +14,7 @@ return [
 		['name' => 'api#catalog',     'url' => '/api/catalog',         'verb' => 'GET'],
 		['name' => 'api#manifest',    'url' => '/api/manifest',        'verb' => 'GET'],
 		['name' => 'api#create',      'url' => '/api/pod',             'verb' => 'POST'],
+		['name' => 'api#runNotebook', 'url' => '/api/run-notebook',    'verb' => 'POST'],
 		['name' => 'api#delete',      'url' => '/api/pod/delete',      'verb' => 'POST'],
 		['name' => 'api#allowedIps',  'url' => '/api/pod/allowed-ips', 'verb' => 'POST'],
 		['name' => 'api#ports',       'url' => '/api/pod/ports',       'verb' => 'POST'],

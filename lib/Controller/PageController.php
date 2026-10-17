@@ -10,11 +10,13 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
+use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\Template\PublicTemplateResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
+use OCP\IUserSession;
 
 class PageController extends Controller {
 	public function __construct(
@@ -23,6 +25,7 @@ class PageController extends Controller {
 		private PodService $pods,
 		private IURLGenerator $urlGenerator,
 		private IL10N $l,
+		private IUserSession $userSession,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -31,6 +34,36 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	public function index(): TemplateResponse {
 		return new TemplateResponse('user_pods', 'index');
+	}
+
+	/**
+	 * The page behind "Run this notebook" (catalogue landing pages, notebook
+	 * viewer): does the whole job server-side and either sends the browser
+	 * straight to the open notebook, or shows a waiting page that polls until
+	 * the new server is up and then goes there. A link to this page from a
+	 * public page works for anonymous visitors too: the login redirect brings
+	 * them back here afterwards.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function run(string $token = '', string $path = '', string $name = '', string $file = ''): TemplateResponse|RedirectResponse {
+		$uid = $this->userSession->getUser()?->getUID() ?? '';
+		try {
+			$res = $this->pods->runNotebook($uid, $token, $path, $name, $file);
+		} catch (PodHostException $e) {
+			return new TemplateResponse('user_pods', 'run', ['error' => $e->getMessage(), 'pod' => '', 'file' => '']);
+		}
+		if (($res['status'] ?? '') === 'ready' && !empty($res['url'])) {
+			return new RedirectResponse((string)$res['url']);
+		}
+		return new TemplateResponse('user_pods', 'run', [
+			'error' => '',
+			'pod' => (string)($res['pod'] ?? ''),
+			'file' => (string)($res['file'] ?? ''),
+			'image' => (string)($res['image'] ?? ''),
+			'containers_url' => $this->urlGenerator->linkToOCSRouteAbsolute('user_pods.api.containers'),
+			'pods_url' => $this->urlGenerator->linkToRoute('user_pods.page.index'),
+		]);
 	}
 
 	/**

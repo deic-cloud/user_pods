@@ -8,6 +8,7 @@ use OCA\UserPods\Exception\PodHostException;
 use OCP\Http\Client\IClientService;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
+use OCP\Files\IRootFolder;
 use OCP\IGroupManager;
 use Psr\Log\LoggerInterface;
 
@@ -37,6 +38,7 @@ class PodService {
 		private LoggerInterface $logger,
 		private ICacheFactory $cacheFactory,
 		private ?IGroupManager $groupManager = null,
+		private ?IRootFolder $rootFolder = null,
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
 		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
@@ -504,6 +506,208 @@ class PodService {
 		}
 		curl_multi_close($multi);
 		return $out;
+	}
+
+	// ── "Run this notebook": copy, pick an image, reuse or start a pod ────────────
+
+	/**
+	 * One action behind the "Run this notebook" button: a notebook from a public
+	 * link (token, and a path inside it for folder shares) is copied into the
+	 * user's own files under Notebooks/ (a real copy, so it can be saved), or an
+	 * own file ($ownFile) is used as it is; an image is chosen from the
+	 * notebook's kernel; a running server of that image is reused, else one is
+	 * started with the file set. Returns
+	 *   ['status' => 'ready',    'url' => <Jupyter URL opening the notebook>, 'file' => <path>]
+	 *   ['status' => 'starting', 'pod' => <name>, 'file' => <path>]
+	 * and throws PodHostException with a message meant for the user otherwise.
+	 */
+	public function runNotebook(string $uid, string $token = '', string $path = '', string $name = '', string $ownFile = ''): array {
+		if ($this->rootFolder === null) {
+			throw new PodHostException('Files unavailable');
+		}
+		$userFolder = $this->rootFolder->getUserFolder($uid);
+		if ($ownFile !== '') {
+			$file = ltrim($ownFile, '/');
+			try {
+				$node = $userFolder->get($file);
+			} catch (\Throwable) {
+				throw new PodHostException('Notebook not found: ' . $file);
+			}
+		} elseif ($token !== '') {
+			[$file, $node] = $this->copyFromPublicLink($userFolder, $token, $path, $name);
+		} else {
+			throw new PodHostException('No notebook given');
+		}
+		if (!str_ends_with(strtolower($file), '.ipynb')) {
+			throw new PodHostException('Not a notebook: ' . $file);
+		}
+		$kernel = '';
+		try {
+			$meta = json_decode((string)$node->getContent(), true);
+			$kernel = (string)($meta['metadata']['kernelspec']['name'] ?? '');
+		} catch (\Throwable) {
+		}
+		$entry = $this->imageForKernel($uid, $kernel);
+		if ($entry === null) {
+			throw new PodHostException('No notebook image is available for the kernel "' . $kernel . '"');
+		}
+		if (($url = $this->runningServerUrl($uid, $entry, $file)) !== '') {
+			return ['status' => 'ready', 'url' => $url, 'file' => $file, 'image' => $entry['file']];
+		}
+		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '', '', 'medium');
+		$pod = (string)($res['name'] ?? $res['pod_name'] ?? ($res['data']['name'] ?? ''));
+		return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
+	}
+
+	/**
+	 * Copy a notebook out of a public link into Notebooks/ of the user's files,
+	 * reading it over the link's public WebDAV on the node that holds it (the
+	 * master in a cluster), so this works whatever node the user is homed on.
+	 * An existing copy with the same name is reused, not overwritten.
+	 * @return array{0: string, 1: \OCP\Files\File}
+	 */
+	private function copyFromPublicLink(\OCP\Files\Folder $userFolder, string $token, string $path, string $name): array {
+		if (!preg_match('/^[A-Za-z0-9_.-]+$/', $token)) {
+			throw new PodHostException('Invalid link');
+		}
+		$path = trim(str_replace('\\', '/', $path), '/');
+		if (str_contains($path, '..')) {
+			throw new PodHostException('Invalid path');
+		}
+		$base = basename($path !== '' ? $path : $name);
+		$base = preg_replace('/[\\\\\\/:*?"<>|]+/', '_', $base) ?: '';
+		if ($base === '' || !str_ends_with(strtolower($base), '.ipynb')) {
+			throw new PodHostException('The link does not point at a notebook');
+		}
+		$body = '';
+		// Same node: read the shared node directly.
+		try {
+			$share = \OCP\Server::get(\OCP\Share\IManager::class)->getShareByToken($token);
+			$node = $share->getNode();
+			if ($path !== '' && $node instanceof \OCP\Files\Folder) {
+				$node = $node->get($path);
+			}
+			if ($node instanceof \OCP\Files\File) {
+				$body = (string)$node->getContent();
+			}
+		} catch (\Throwable) {
+		}
+		// Another node of the cluster holds the share (the public link lives on the
+		// owner's node): read it over the link's public WebDAV there. The master
+		// cannot answer public WebDAV for a silo's share, so each node is asked.
+		if ($body === '') {
+			$hosts = [];
+			if (class_exists(\OCA\FilesSharding\Service\ShardingService::class)) {
+				try {
+					foreach (\OCP\Server::get(\OCA\FilesSharding\Service\ShardingService::class)->getAllServers() as $server) {
+						$hosts[] = rtrim((string)$server->getUrl(), '/');
+					}
+				} catch (\Throwable) {
+				}
+			}
+			if ($hosts === []) {
+				$hosts[] = rtrim((string)\OCP\Server::get(\OCP\IURLGenerator::class)->getAbsoluteURL('/'), '/');
+			}
+			$rel = $path !== '' ? implode('/', array_map('rawurlencode', explode('/', $path))) : '';
+			$client = $this->clientService->newClient();
+			$last = '';
+			foreach ($hosts as $host) {
+				try {
+					$resp = $client->get($host . '/public.php/webdav/' . $rel, ['auth' => [$token, ''], 'timeout' => 120, 'verify' => false]);
+					if ($resp->getStatusCode() === 200) {
+						$body = (string)$resp->getBody();
+						break;
+					}
+				} catch (\Throwable $e) {
+					$last = $e->getMessage();
+				}
+			}
+			if ($body === '') {
+				throw new PodHostException('Could not read the notebook from the link' . ($last !== '' ? ': ' . $last : ''));
+			}
+		}
+		if ($body === '' || json_decode($body, true) === null) {
+			throw new PodHostException('The link did not return a notebook');
+		}
+		try {
+			$dir = $userFolder->nodeExists('Notebooks') ? $userFolder->get('Notebooks') : $userFolder->newFolder('Notebooks');
+			$rel = 'Notebooks/' . $base;
+			if ($dir->nodeExists($base)) {
+				$node = $dir->get($base);
+			} else {
+				$node = $dir->newFile($base, $body);
+			}
+		} catch (\Throwable $e) {
+			throw new PodHostException('Could not save the notebook in your files: ' . $e->getMessage());
+		}
+		return [$rel, $node];
+	}
+
+	/**
+	 * The image for a notebook kernel: an image whose catalog/notebook-kernels
+	 * annotation matches (comma-separated patterns, * wildcard; a specific
+	 * pattern beats a bare *), else by name among the jupyter* images (matlab and
+	 * wolfram kernels to their images, anything else to the plain one). Images
+	 * the user may launch come first. Mirrors imageForKernel() in js/main.js.
+	 */
+	private function imageForKernel(string $uid, string $kernel): ?array {
+		$k = strtolower($kernel);
+		$catalog = $this->getCatalog($uid);
+		usort($catalog, static fn ($a, $b) => (int)(($a['allowed'] ?? true) === false) <=> (int)(($b['allowed'] ?? true) === false));
+		$glob = static function (string $pat) use ($k): bool {
+			$re = '/^' . str_replace('\\*', '.*', preg_quote(strtolower(trim($pat)), '/')) . '$/';
+			return (bool)preg_match($re, $k);
+		};
+		foreach ($catalog as $e) {
+			foreach (array_filter(array_map('trim', explode(',', (string)$e['kernels']))) as $pat) {
+				if ($pat !== '*' && $glob($pat)) {
+					return $e;
+				}
+			}
+		}
+		foreach ($catalog as $e) {
+			foreach (array_map('trim', explode(',', (string)$e['kernels'])) as $pat) {
+				if ($pat === '*') {
+					return $e;
+				}
+			}
+		}
+		$jupyter = array_values(array_filter($catalog, static fn ($e) => preg_match('/^jupyter/i', (string)$e['file'])));
+		usort($jupyter, static fn ($a, $b) => strlen($a['file']) <=> strlen($b['file']));
+		$family = preg_match('/wolfram|mathematica/', $k) ? '/mathematica|wolfram/i' : (preg_match('/matlab/', $k) ? '/matlab/i' : null);
+		foreach ($jupyter as $e) {
+			if ($family !== null ? preg_match($family, $e['file']) : !preg_match('/mathematica|wolfram|matlab/i', $e['file'])) {
+				return $e;
+			}
+		}
+		return null;
+	}
+
+	/** A running server of this image for this user: its Jupyter URL opening $file, else ''. */
+	private function runningServerUrl(string $uid, array $entry, string $file): string {
+		$base = (string)$entry['name'] . '-' . preg_replace('/[@._]/', '-', $uid);
+		if ($entry['name'] === '') {
+			return '';
+		}
+		foreach ($this->getContainers($uid) as $c) {
+			$n = (string)($c['pod_name'] ?? '');
+			if ($n !== $base && !preg_match('/^' . preg_quote($base, '/') . '-\\d+$/', $n)) {
+				continue;
+			}
+			if (!str_starts_with((string)($c['status'] ?? ''), 'Running') || empty($c['url'])) {
+				continue;
+			}
+			$u = parse_url((string)$c['url']);
+			parse_str((string)($u['query'] ?? ''), $q);
+			if (empty($q['token'])) {
+				continue;
+			}
+			$origin = ($u['scheme'] ?? 'https') . '://' . ($u['host'] ?? '') . (isset($u['port']) ? ':' . $u['port'] : '');
+			$lab = str_contains((string)($u['path'] ?? ''), '/lab') || str_contains((string)$entry['file'], 'jupyterlab');
+			$enc = implode('/', array_map('rawurlencode', explode('/', $file)));
+			return $origin . ($lab ? '/lab/tree/' : '/notebooks/') . $enc . '?token=' . rawurlencode((string)$q['token']);
+		}
+		return '';
 	}
 
 	/**

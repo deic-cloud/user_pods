@@ -71,6 +71,17 @@ class ApiController extends Controller {
 		return $this->host(fn () => $this->pods->checkManifest($this->uid(), $yaml));
 	}
 
+	/**
+	 * "Run this notebook": copy a notebook from a public link (token [+ path],
+	 * name for single-file links) or take an own file (file), choose the image
+	 * from its kernel, reuse a running server or start one. See
+	 * PodService::runNotebook() for the result shape.
+	 */
+	#[NoAdminRequired]
+	public function runNotebook(string $token = '', string $path = '', string $name = '', string $file = ''): JSONResponse {
+		return $this->host(fn () => $this->pods->runNotebook($this->uid(), $token, $path, $name, $file));
+	}
+
 	#[NoAdminRequired]
 	public function create(string $yaml_url, string $public_key = '', string $mount_root = '',
 		string $mount_path = '', string $cvmfs_repos = '', string $file = '', string $setup_script = '',
