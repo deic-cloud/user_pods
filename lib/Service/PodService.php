@@ -574,12 +574,8 @@ class PodService {
 		if (str_contains($path, '..')) {
 			throw new PodHostException('Invalid path');
 		}
-		$base = basename($path !== '' ? $path : $name);
-		$base = preg_replace('/[\\\\\\/:*?"<>|]+/', '_', $base) ?: '';
-		if ($base === '' || !str_ends_with(strtolower($base), '.ipynb')) {
-			throw new PodHostException('The link does not point at a notebook');
-		}
 		$body = '';
+		$realName = '';
 		// Same node: read the shared node directly.
 		try {
 			$share = \OCP\Server::get(\OCP\Share\IManager::class)->getShareByToken($token);
@@ -589,6 +585,7 @@ class PodService {
 			}
 			if ($node instanceof \OCP\Files\File) {
 				$body = (string)$node->getContent();
+				$realName = $node->getName();
 			}
 		} catch (\Throwable) {
 		}
@@ -610,12 +607,24 @@ class PodService {
 			}
 			$rel = $path !== '' ? implode('/', array_map('rawurlencode', explode('/', $path))) : '';
 			$client = $this->clientService->newClient();
+			$opts = ['auth' => [$token, ''], 'timeout' => 120, 'verify' => false, 'nextcloud' => ['allow_local_address' => true]];
 			$last = '';
 			foreach ($hosts as $host) {
 				try {
-					$resp = $client->get($host . '/public.php/webdav/' . $rel, ['auth' => [$token, ''], 'timeout' => 120, 'verify' => false]);
+					$resp = $client->get($host . '/public.php/webdav/' . $rel, $opts);
 					if ($resp->getStatusCode() === 200) {
 						$body = (string)$resp->getBody();
+						// the file's own name, from the link (the page may only know a display title)
+						try {
+							$xml = (string)$client->request('PROPFIND', $host . '/public.php/webdav/' . $rel, $opts + [
+								'headers' => ['Depth' => '0', 'Content-Type' => 'text/xml'],
+								'body' => '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>',
+							])->getBody();
+							if (preg_match('#<d:displayname>([^<]*)</d:displayname>#i', $xml, $m)) {
+								$realName = html_entity_decode(trim($m[1]));
+							}
+						} catch (\Throwable) {
+						}
 						break;
 					}
 				} catch (\Throwable $e) {
@@ -625,6 +634,11 @@ class PodService {
 			if ($body === '') {
 				throw new PodHostException('Could not read the notebook from the link' . ($last !== '' ? ': ' . $last : ''));
 			}
+		}
+		$base = basename($path !== '' ? $path : ($realName !== '' ? $realName : $name));
+		$base = preg_replace('/[\\\\\\/:*?"<>|]+/', '_', $base) ?: '';
+		if ($base === '' || !str_ends_with(strtolower($base), '.ipynb')) {
+			throw new PodHostException('The link does not point at a notebook (' . $base . ')');
 		}
 		if ($body === '' || json_decode($body, true) === null) {
 			throw new PodHostException('The link did not return a notebook');
