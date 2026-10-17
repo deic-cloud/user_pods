@@ -25,6 +25,7 @@ class PodService {
 	private string $manifestsURL;
 	private string $rawManifestsURL;
 	private string $getContainersPassword;
+	private int $maxPodsPerUser;
 
 	public function __construct(
 		IAppConfig $appConfig,
@@ -49,6 +50,14 @@ class PodService {
 		// weak password by design). Sent as a plain ?password= GET param, matching
 		// the host side. Empty = don't send (endpoint then open, as before).
 		$this->getContainersPassword = $appConfig->getValueString('user_pods', 'getContainersPassword', '');
+		// Per-user cap on simultaneous pods (admin setting; 0 = unlimited). The host
+		// side has no cap of its own beyond its pod-naming scheme, so this is where
+		// the limit is set and explained to the user.
+		$this->maxPodsPerUser = max(0, (int)$appConfig->getValueString('user_pods', 'maxPodsPerUser', '5'));
+	}
+
+	public function getMaxPodsPerUser(): int {
+		return $this->maxPodsPerUser;
 	}
 
 	public function getRawManifestsURL(): string {
@@ -536,6 +545,14 @@ class PodService {
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
 		string $peers = '', string $allowedIp = '', string $podType = ''): array {
+		if ($this->maxPodsPerUser > 0) {
+			$running = count($this->getContainers($uid));
+			if ($running >= $this->maxPodsPerUser) {
+				throw new PodHostException(sprintf(
+					'You already have %d pod%s running; the limit is %d. Delete one before starting another.',
+					$running, $running === 1 ? '' : 's', $this->maxPodsPerUser));
+			}
+		}
 		// An image that writes into its mounted folder (NFS_RW: "yes" in the
 		// manifest) only works on a /storage/ mount: /files/ mounts are read-only.
 		// The dialog hides /files/ for such images; the API refuses it, so a

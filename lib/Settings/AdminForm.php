@@ -52,6 +52,14 @@ class AdminForm implements IDeclarativeSettingsForm {
 					'default' => '',
 				],
 				[
+					'id' => 'maxPodsPerUser',
+					'title' => 'Pods per user',
+					'description' => 'How many pods one user may run at the same time. 0 = no limit.',
+					'type' => DeclarativeSettingsTypes::NUMBER,
+					'placeholder' => '5',
+					'default' => 5,
+				],
+				[
 					'id' => 'manifestsURL',
 					'title' => 'Manifest library — listing API',
 					'description' => 'GitHub contents API URL used to list image manifests',
