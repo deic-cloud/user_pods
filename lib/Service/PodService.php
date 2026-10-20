@@ -672,7 +672,9 @@ class PodService {
 					continue;
 				}
 				$podStatus = (string)($c['status'] ?? '');
-				if (str_starts_with($podStatus, 'Running') && !empty($c['url'])) {
+				// ready = the server itself is up: the host adds the notebook token to the
+				// address only once the image has written it (the proxy port comes earlier)
+				if (str_starts_with($podStatus, 'Running') && !empty($c['url']) && str_contains((string)$c['url'], 'token=')) {
 					$status = 'ready';
 					$url = (string)$c['url'];
 				}
