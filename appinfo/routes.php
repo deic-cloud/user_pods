@@ -6,6 +6,8 @@ return [
 	'routes' => [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 		['name' => 'page#run',   'url' => '/run', 'verb' => 'GET'],
+		// Guest (not logged in) run: the waiting page polls this by the guest token.
+		['name' => 'page#guestStatus', 'url' => '/guest/status', 'verb' => 'GET'],
 		// The image catalog as a public page, with Launch links into the app.
 		['name' => 'page#catalog', 'url' => '/catalog', 'verb' => 'GET'],
 

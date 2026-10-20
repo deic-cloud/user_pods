@@ -8,6 +8,8 @@ use OCA\UserPods\Exception\PodHostException;
 use OCA\UserPods\Service\PodService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\Attribute\AnonRateLimit;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\RedirectResponse;
@@ -44,10 +46,35 @@ class PageController extends Controller {
 	 * public page works for anonymous visitors too: the login redirect brings
 	 * them back here afterwards.
 	 */
-	#[NoAdminRequired]
+	#[PublicPage]
 	#[NoCSRFRequired]
+	#[AnonRateLimit(limit: 10, period: 60)]
 	public function run(string $token = '', string $path = '', string $name = '', string $file = ''): TemplateResponse|RedirectResponse {
 		$uid = $this->userSession->getUser()?->getUID() ?? '';
+		if ($uid === '') {
+			// Not logged in. With guest pods enabled, a public link runs in a
+			// throwaway pod; otherwise log in first and come back here.
+			if (!$this->pods->guestPodsEnabled() || $token === '') {
+				return new RedirectResponse($this->urlGenerator->linkToRoute('core.login.showLoginForm',
+					['redirect_url' => $this->request->getRequestUri()]));
+			}
+			try {
+				$res = $this->pods->runNotebookAsGuest($token, $path, $name, $this->request->getRemoteAddress());
+			} catch (PodHostException $e) {
+				return new TemplateResponse('user_pods', 'run', $this->guestVars(['error' => $e->getMessage()]), TemplateResponse::RENDER_AS_GUEST);
+			}
+			if (($res['status'] ?? '') === 'ready' && !empty($res['url'])) {
+				return new RedirectResponse((string)$res['url']);
+			}
+			return new TemplateResponse('user_pods', 'run', $this->guestVars([
+				'error' => '',
+				'pod' => (string)($res['pod'] ?? ''),
+				'file' => (string)($res['file'] ?? ''),
+				'image' => (string)($res['image'] ?? ''),
+				'status_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.page.guestStatus', ['gt' => (string)($res['guest'] ?? '')]),
+				'expires' => (int)($res['expires'] ?? 0),
+			]), TemplateResponse::RENDER_AS_GUEST);
+		}
 		try {
 			$res = $this->pods->runNotebook($uid, $token, $path, $name, $file);
 		} catch (PodHostException $e) {
@@ -65,6 +92,24 @@ class PageController extends Controller {
 			'containers_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.api.containers'),
 			'pods_url' => $this->urlGenerator->linkToRoute('user_pods.page.index'),
 		]);
+	}
+
+	/** Template variables common to the guest variant of the run page. */
+	private function guestVars(array $vars): array {
+		return $vars + [
+			'guest' => true, 'pod' => '', 'file' => '', 'image' => '', 'status_url' => '', 'expires' => 0,
+			'lifetime' => $this->pods->guestPodLifetime(),
+			'login_url' => $this->urlGenerator->linkToRoute('core.login.showLoginForm', ['redirect_url' => $this->request->getRequestUri()]),
+			'pods_url' => '', 'containers_url' => '',
+		];
+	}
+
+	/** Polled by the guest waiting page: the pod's state and, once up, its address. */
+	#[PublicPage]
+	#[NoCSRFRequired]
+	#[AnonRateLimit(limit: 60, period: 60)]
+	public function guestStatus(string $gt = ''): JSONResponse {
+		return new JSONResponse($this->pods->guestStatus($gt));
 	}
 
 	/**

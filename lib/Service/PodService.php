@@ -9,6 +9,7 @@ use OCP\Http\Client\IClientService;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
 use OCP\Files\IRootFolder;
+use OCP\IDBConnection;
 use OCP\IGroupManager;
 use Psr\Log\LoggerInterface;
 
@@ -30,6 +31,12 @@ class PodService {
 	private int $maxPodsPerUser;
 	/** @var string[] */
 	private array $unlimitedUsers = [];
+	// Guest pods: throwaway pods for visitors who are not logged in ("Run this
+	// notebook" from a public page). Off unless the admin switches it on.
+	private bool $guestPods;
+	private int $guestPodLifetime;   // minutes
+	private int $guestMaxPods;       // simultaneous guest pods, whole service
+	private string $guestPodType;
 
 	public function __construct(
 		IAppConfig $appConfig,
@@ -39,6 +46,7 @@ class PodService {
 		private ICacheFactory $cacheFactory,
 		private ?IGroupManager $groupManager = null,
 		private ?IRootFolder $rootFolder = null,
+		private ?IDBConnection $db = null,
 	) {
 		$this->publicIP = $appConfig->getValueString('user_pods', 'publicIP', '');
 		// Renamed from the vague 'privateIP'; fall back to it for existing installs.
@@ -64,6 +72,19 @@ class PodService {
 		// or 'batch'); administrators are always exempt.
 		$this->unlimitedUsers = array_values(array_filter(array_map('trim',
 			preg_split('/[\s,;]+/', $appConfig->getValueString('user_pods', 'unlimitedPodUsers', '')) ?: [])));
+		// Guest pods (declarative settings store a checkbox as '1'/'true'/'0'/'').
+		$this->guestPods = in_array(strtolower($appConfig->getValueString('user_pods', 'guestPods', '0')), ['1', 'true', 'yes', 'on'], true);
+		$this->guestPodLifetime = max(1, (int)($appConfig->getValueString('user_pods', 'guestPodLifetime', '60') ?: 60));
+		$this->guestMaxPods = max(0, (int)($appConfig->getValueString('user_pods', 'guestMaxPods', '10') ?: 10));
+		$this->guestPodType = trim($appConfig->getValueString('user_pods', 'guestPodType', 'medium')) ?: 'medium';
+	}
+
+	public function guestPodsEnabled(): bool {
+		return $this->guestPods;
+	}
+
+	public function guestPodLifetime(): int {
+		return $this->guestPodLifetime;
 	}
 
 	/** Does the per-user pod limit apply to this account? */
@@ -560,6 +581,178 @@ class PodService {
 	}
 
 	/**
+	 * "Run this notebook" for a visitor who is not logged in: a throwaway pod
+	 * with a synthetic owner (guest-<hex>), locked to the visitor's address, no
+	 * home server (the image keeps the notebook in a local work directory and
+	 * nothing is saved), deleted by the cull job after guestPodLifetime minutes.
+	 * One guest pod per visitor address (a second request from the same address
+	 * returns the existing one); guestMaxPods for the whole service.
+	 * Returns ['status' => 'starting'|'ready', 'guest' => <token>, 'pod' => <name>,
+	 *          'url' => <Jupyter URL when ready>, 'expires' => <unix time>].
+	 */
+	public function runNotebookAsGuest(string $token, string $path, string $name, string $clientIp): array {
+		if (!$this->guestPods) {
+			throw new PodHostException('Running notebooks without logging in is not enabled on this service.');
+		}
+		if ($this->db === null) {
+			throw new PodHostException('Guest pods are unavailable (no database)');
+		}
+		$clientIp = substr(trim($clientIp), 0, 45);
+		// the visitor already has a live guest pod: hand that one back
+		foreach ($this->guestRows('client_ip', $clientIp) as $row) {
+			$st = $this->guestStatus((string)$row['token']);
+			if (($st['status'] ?? '') !== 'gone') {
+				return $st + ['status' => $st['url'] !== '' ? 'ready' : 'starting'];
+			}
+		}
+		if ($this->guestMaxPods > 0 && $this->countGuests() >= $this->guestMaxPods) {
+			throw new PodHostException('All guest notebook servers are in use at the moment. Please try again in a few minutes, or log in to run the notebook on your own account.');
+		}
+		[$file, $body, $davUrl] = $this->readPublicLink($token, $path, $name);
+		if ($davUrl === '') {
+			throw new PodHostException('The notebook has no public address the pod could fetch it from');
+		}
+		$kernel = '';
+		try {
+			$meta = json_decode($body, true);
+			$kernel = (string)($meta['metadata']['kernelspec']['name'] ?? '');
+		} catch (\Throwable) {
+		}
+		$entry = $this->imageForKernel(null, $kernel);
+		if ($entry === null) {
+			throw new PodHostException('No notebook image is available for the kernel "' . $kernel . '"');
+		}
+		$owner = 'guest-' . bin2hex(random_bytes(5));
+		$guestToken = bin2hex(random_bytes(16));
+		$res = $this->createPod($owner, $this->rawManifestsURL . $entry['file'], '', '', '', '', $davUrl, '', '', $clientIp, $this->guestPodType, true);
+		$pod = (string)($res['name'] ?? $res['pod_name'] ?? ($res['data']['name'] ?? ''));
+		if ($pod === '') {
+			throw new PodHostException('The pod could not be started' . (!empty($res['data']['message']) ? ': ' . $res['data']['message'] : ''));
+		}
+		$now = time();
+		$qb = $this->db->getQueryBuilder();
+		$qb->insert('user_pods_guests')->values([
+			'token' => $qb->createNamedParameter($guestToken),
+			'owner' => $qb->createNamedParameter($owner),
+			'pod' => $qb->createNamedParameter(substr($pod, 0, 128)),
+			'image' => $qb->createNamedParameter(substr((string)$entry['file'], 0, 128)),
+			'file' => $qb->createNamedParameter(substr($file, 0, 255)),
+			'client_ip' => $qb->createNamedParameter($clientIp),
+			'created_at' => $qb->createNamedParameter($now, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT),
+			'expires_at' => $qb->createNamedParameter($now + $this->guestPodLifetime * 60, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT),
+		])->executeStatement();
+		return ['status' => 'starting', 'guest' => $guestToken, 'pod' => $pod, 'url' => '', 'file' => $file,
+			'image' => $entry['file'], 'expires' => $now + $this->guestPodLifetime * 60];
+	}
+
+	/**
+	 * State of a guest pod for the waiting page: 'starting' (pod exists, no
+	 * server address yet), 'ready' (url set), 'gone' (expired or no such pod).
+	 */
+	public function guestStatus(string $guestToken): array {
+		$gone = ['status' => 'gone', 'guest' => $guestToken, 'pod' => '', 'url' => '', 'remaining' => 0];
+		if ($this->db === null || !preg_match('/^[a-f0-9]{32}$/', $guestToken)) {
+			return $gone;
+		}
+		$rows = $this->guestRows('token', $guestToken);
+		if ($rows === []) {
+			return $gone;
+		}
+		$row = $rows[0];
+		$remaining = (int)$row['expires_at'] - time();
+		if ($remaining <= 0) {
+			return $gone;
+		}
+		$status = 'starting';
+		$url = '';
+		$podStatus = '';
+		try {
+			foreach ($this->getContainers((string)$row['owner']) as $c) {
+				if ((string)($c['pod_name'] ?? '') !== (string)$row['pod']) {
+					continue;
+				}
+				$podStatus = (string)($c['status'] ?? '');
+				if (str_starts_with($podStatus, 'Running') && !empty($c['url'])) {
+					$status = 'ready';
+					$url = (string)$c['url'];
+				}
+				break;
+			}
+		} catch (\Throwable) {
+		}
+		return ['status' => $status, 'guest' => $guestToken, 'pod' => (string)$row['pod'], 'pod_status' => $podStatus,
+			'url' => $url, 'file' => (string)$row['file'], 'remaining' => $remaining, 'expires' => (int)$row['expires_at']];
+	}
+
+	/** Delete guest pods past their lifetime and forget rows whose pod is gone. Returns how many pods were deleted. */
+	public function cullGuests(): int {
+		if ($this->db === null) {
+			return 0;
+		}
+		$deleted = 0;
+		$now = time();
+		foreach ($this->guestRows() as $row) {
+			$expired = (int)$row['expires_at'] <= $now;
+			$exists = true;
+			if (!$expired) {
+				// a pod deleted by other means (the host, an admin): drop the row once it is surely not just starting
+				if ((int)$row['created_at'] + 600 < $now) {
+					try {
+						$exists = false;
+						foreach ($this->getContainers((string)$row['owner']) as $c) {
+							if ((string)($c['pod_name'] ?? '') === (string)$row['pod']) {
+								$exists = true;
+								break;
+							}
+						}
+					} catch (\Throwable) {
+						$exists = true; // host unreachable: keep the row, try again next time
+					}
+				}
+				if ($exists) {
+					continue;
+				}
+			}
+			if ($expired) {
+				try {
+					$this->deletePod((string)$row['owner'], (string)$row['pod']);
+					$deleted++;
+				} catch (\Throwable $e) {
+					$this->logger->warning('user_pods: could not delete expired guest pod ' . $row['pod'] . ': ' . $e->getMessage());
+					continue; // keep the row, retry next run
+				}
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('user_pods_guests')->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$row['id'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))->executeStatement();
+		}
+		return $deleted;
+	}
+
+	/** Rows of user_pods_guests, optionally filtered on one column. */
+	private function guestRows(string $column = '', string $value = ''): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('user_pods_guests');
+		if ($column !== '') {
+			$qb->where($qb->expr()->eq($column, $qb->createNamedParameter($value)));
+		}
+		$qb->orderBy('id', 'DESC');
+		$res = $qb->executeQuery();
+		$rows = $res->fetchAll();
+		$res->closeCursor();
+		return $rows;
+	}
+
+	private function countGuests(): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('id', 'n'))->from('user_pods_guests')
+			->where($qb->expr()->gt('expires_at', $qb->createNamedParameter(time(), \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+		$res = $qb->executeQuery();
+		$n = (int)$res->fetchOne();
+		$res->closeCursor();
+		return $n;
+	}
+
+	/**
 	 * Copy a notebook out of a public link into Notebooks/ of the user's files,
 	 * reading it over the link's public WebDAV on the node that holds it (the
 	 * master in a cluster), so this works whatever node the user is homed on.
@@ -567,6 +760,28 @@ class PodService {
 	 * @return array{0: string, 1: \OCP\Files\File}
 	 */
 	private function copyFromPublicLink(\OCP\Files\Folder $userFolder, string $token, string $path, string $name): array {
+		[$base, $body] = $this->readPublicLink($token, $path, $name);
+		try {
+			$dir = $userFolder->nodeExists('Notebooks') ? $userFolder->get('Notebooks') : $userFolder->newFolder('Notebooks');
+			$rel = 'Notebooks/' . $base;
+			if ($dir->nodeExists($base)) {
+				$node = $dir->get($base);
+			} else {
+				$node = $dir->newFile($base, $body);
+			}
+		} catch (\Throwable $e) {
+			throw new PodHostException('Could not save the notebook in your files: ' . $e->getMessage());
+		}
+		return [$rel, $node];
+	}
+
+	/**
+	 * Read a notebook out of a public link: its file name, its content and the
+	 * URL it can be fetched from without credentials (the link's public WebDAV
+	 * on the node that holds it, public.php/dav/files/<token>/<path>).
+	 * @return array{0: string, 1: string, 2: string}
+	 */
+	private function readPublicLink(string $token, string $path, string $name): array {
 		if (!preg_match('/^[A-Za-z0-9_.-]+$/', $token)) {
 			throw new PodHostException('Invalid link');
 		}
@@ -576,6 +791,8 @@ class PodService {
 		}
 		$body = '';
 		$realName = '';
+		$davUrl = '';
+		$rel = $path !== '' ? implode('/', array_map('rawurlencode', explode('/', $path))) : '';
 		// Same node: read the shared node directly.
 		try {
 			$share = \OCP\Server::get(\OCP\Share\IManager::class)->getShareByToken($token);
@@ -586,6 +803,8 @@ class PodService {
 			if ($node instanceof \OCP\Files\File) {
 				$body = (string)$node->getContent();
 				$realName = $node->getName();
+				$davUrl = rtrim((string)\OCP\Server::get(\OCP\IURLGenerator::class)->getAbsoluteURL('/'), '/')
+					. '/public.php/dav/files/' . $token . ($rel !== '' ? '/' . $rel : '');
 			}
 		} catch (\Throwable) {
 		}
@@ -605,7 +824,6 @@ class PodService {
 			if ($hosts === []) {
 				$hosts[] = rtrim((string)\OCP\Server::get(\OCP\IURLGenerator::class)->getAbsoluteURL('/'), '/');
 			}
-			$rel = $path !== '' ? implode('/', array_map('rawurlencode', explode('/', $path))) : '';
 			$client = $this->clientService->newClient();
 			$opts = ['auth' => [$token, ''], 'timeout' => 120, 'verify' => false, 'nextcloud' => ['allow_local_address' => true]];
 			$last = '';
@@ -614,6 +832,7 @@ class PodService {
 					$resp = $client->get($host . '/public.php/webdav/' . $rel, $opts);
 					if ($resp->getStatusCode() === 200) {
 						$body = (string)$resp->getBody();
+						$davUrl = $host . '/public.php/dav/files/' . $token . ($rel !== '' ? '/' . $rel : '');
 						// the file's own name, from the link (the page may only know a display title)
 						try {
 							$xml = (string)$client->request('PROPFIND', $host . '/public.php/webdav/' . $rel, $opts + [
@@ -643,18 +862,13 @@ class PodService {
 		if ($body === '' || json_decode($body, true) === null) {
 			throw new PodHostException('The link did not return a notebook');
 		}
-		try {
-			$dir = $userFolder->nodeExists('Notebooks') ? $userFolder->get('Notebooks') : $userFolder->newFolder('Notebooks');
-			$rel = 'Notebooks/' . $base;
-			if ($dir->nodeExists($base)) {
-				$node = $dir->get($base);
-			} else {
-				$node = $dir->newFile($base, $body);
-			}
-		} catch (\Throwable $e) {
-			throw new PodHostException('Could not save the notebook in your files: ' . $e->getMessage());
+		// A file share: the link IS the file, so its URL ends in the token and
+		// carries no name. The pod names the fetched file after a files= query
+		// parameter (Nextcloud's download links have one; the DAV endpoint ignores it).
+		if ($rel === '' && $davUrl !== '') {
+			$davUrl .= '?files=' . rawurlencode($base);
 		}
-		return [$rel, $node];
+		return [$base, $body, $davUrl];
 	}
 
 	/**
@@ -664,7 +878,7 @@ class PodService {
 	 * wolfram kernels to their images, anything else to the plain one). Images
 	 * the user may launch come first. Mirrors imageForKernel() in js/main.js.
 	 */
-	private function imageForKernel(string $uid, string $kernel): ?array {
+	private function imageForKernel(?string $uid, string $kernel): ?array {
 		$k = strtolower($kernel);
 		$catalog = $this->getCatalog($uid);
 		usort($catalog, static fn ($a, $b) => (int)(($a['allowed'] ?? true) === false) <=> (int)(($b['allowed'] ?? true) === false));
@@ -784,8 +998,8 @@ class PodService {
 	/** Create a pod via run_pod.php. Returns the host's JSON response decoded. */
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
-		string $peers = '', string $allowedIp = '', string $podType = ''): array {
-		if ($this->limitApplies($uid)) {
+		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false): array {
+		if (!$guest && $this->limitApplies($uid)) {
 			$running = count($this->getContainers($uid));
 			if ($running >= $this->maxPodsPerUser) {
 				throw new PodHostException(sprintf(
@@ -831,6 +1045,9 @@ class PodService {
 		}
 		if ($podType !== '') {
 			$params['pod_type'] = $podType;
+		}
+		if ($guest) {
+			$params['guest'] = '1'; // run_pod.php: no home server, SCIENCEDATA_GUEST=1 in the pod
 		}
 		$params['setup_script'] = $setupScript === '' ? '/dev/null' : $setupScript;
 		$json = $this->httpGet($this->podEndpoint('run_pod.php', $params), false);
