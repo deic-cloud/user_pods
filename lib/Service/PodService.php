@@ -862,11 +862,12 @@ class PodService {
 		if ($body === '' || json_decode($body, true) === null) {
 			throw new PodHostException('The link did not return a notebook');
 		}
-		// A file share: the link IS the file, so its URL ends in the token and
-		// carries no name. The pod names the fetched file after a files= query
-		// parameter (Nextcloud's download links have one; the DAV endpoint ignores it).
+		// A file share: the link IS the file, so its DAV URL ends in the token and
+		// carries no name. Use the link's download URL instead: it answers with a
+		// Content-Disposition file name, which the pod's start script honours
+		// (curl -J). No query string: run_pod.php's shell escaping would mangle it.
 		if ($rel === '' && $davUrl !== '') {
-			$davUrl .= '?files=' . rawurlencode($base);
+			$davUrl = preg_replace('#/public\.php/dav/files/[^/]+$#', '/index.php/s/' . $token . '/download', $davUrl);
 		}
 		return [$base, $body, $davUrl];
 	}
