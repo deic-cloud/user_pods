@@ -575,7 +575,11 @@ class PodService {
 		if (($url = $this->runningServerUrl($uid, $entry, $file)) !== '') {
 			return ['status' => 'ready', 'url' => $url, 'file' => $file, 'image' => $entry['file']];
 		}
-		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '', '', 'medium');
+		// medium unless the manifest's `types` label leaves it out (e.g. MATLAB: large only,
+		// it is OOM-killed drawing figures in 2 GiB); then the largest type it allows.
+		$types = (array)($entry['pod_types'] ?? []);
+		$podType = ($types === [] || in_array('medium', $types, true)) ? 'medium' : (string)end($types);
+		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '', '', $podType);
 		$pod = (string)($res['name'] ?? $res['pod_name'] ?? ($res['data']['name'] ?? ''));
 		return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
 	}
@@ -964,6 +968,7 @@ class PodService {
 				// featured: 1, 2, … (0 or nothing = not featured)
 				'featured' => is_numeric($featured) && (int)$featured > 0 ? (int)$featured : null,
 				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
+				'pod_types' => empty($l['types']) ? [] : explode('-', (string)$l['types']),
 				// the container supplies its address's path (e.g. a Jupyter token) after it starts
 				'wait_token' => in_array(strtolower(trim((string)($a['catalog/wait-for-token'] ?? ''))), ['1', 'true', 'yes'], true),
 				'restricted' => ($l['group'] ?? '') !== '' || ($l['domain'] ?? '') !== '' || ($l['user'] ?? '') !== '',
