@@ -52,7 +52,17 @@
 		<script nonce="<?php p(\OCP\Server::get(\OC\Security\CSP\ContentSecurityPolicyNonceManager::class)->getNonce()); ?>">
 		(function () {
 			var pod = <?php print_unescaped(json_encode($_['pod'])); ?>;
+			var file = <?php print_unescaped(json_encode($_['file'])); ?>;
+			var lab = <?php print_unescaped(json_encode(str_contains((string)$_['image'], 'jupyterlab'))); ?>;
 			var api = <?php print_unescaped(json_encode($_['containers_url'])); ?>;
+			// The server's address opens its file tree; open the notebook instead, as
+			// PodService::runningServerUrl does when the server is already up.
+			function notebookUrl(url) {
+				var m = /^(https?:\/\/[^\/]+)\/([^?#]*)\?(?:[^#]*&)?token=([^&#]+)/.exec(url);
+				if (!m || !file) { return url; }
+				var path = file.split('/').map(encodeURIComponent).join('/');
+				return m[1] + (lab || /(^|\/)lab/.test(m[2]) ? '/lab/tree/' : '/notebooks/') + path + '?token=' + m[3];
+			}
 			var started = Date.now();
 			function poll() {
 				fetch(api, { headers: { 'OCS-APIRequest': 'true', 'requesttoken': OC.requestToken }, credentials: 'same-origin' })
@@ -62,10 +72,13 @@
 						var c = list.filter(function (x) { return x.pod_name === pod; })[0];
 						if (c) {
 							var running = /^Running/.test(c.status || '');
-							document.getElementById('run-status').textContent = pod + ': ' + (running && !c.url
+							// The address appears with the proxy port, before Jupyter listens; it is
+							// ready once the host has added the notebook token (as for guests).
+							var ready = running && c.url && /[?&]token=/.test(c.url);
+							document.getElementById('run-status').textContent = pod + ': ' + (running && !ready
 								? <?php print_unescaped(json_encode($l->t('server is up, waiting for its address…'))); ?>
 								: (c.status || <?php print_unescaped(json_encode($l->t('starting…'))); ?>));
-							if (running && c.url) { location.href = c.url; return; }
+							if (ready) { location.href = notebookUrl(c.url); return; }
 						}
 						if (Date.now() - started > 20 * 60 * 1000) { document.getElementById('run-manual').hidden = false; return; }
 						setTimeout(poll, 5000);
