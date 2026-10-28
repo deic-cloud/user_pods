@@ -1015,6 +1015,23 @@ class PodService {
 					$running, $running === 1 ? '' : 's', $this->maxPodsPerUser));
 			}
 		}
+		// The dialog lists only the images the user may launch; refuse the others
+		// here too, so a direct API call cannot start an image whose labels restrict
+		// it to another user, domain or group. Unreadable manifest = refused.
+		// Only manifests from the image library: the URL is fetched here and by the
+		// pod host, both of which may reach internal addresses.
+		if (!str_starts_with($yamlUrl, $this->rawManifestsURL)) {
+			throw new PodHostException('Unknown image: only images from the image library can be started.');
+		}
+		if (!function_exists('yaml_parse')) {
+			throw new PodHostException('This server cannot read container manifests: the PHP yaml extension is not installed.');
+		}
+		$manifest = yaml_parse($this->httpGet($yamlUrl));
+		$labels = is_array($manifest) ? ($manifest['metadata']['labels'] ?? []) : null;
+		if (!is_array($labels) || !$this->mayLaunch($uid, $labels)) {
+			$this->logger->info('user_pods: ' . $uid . ' refused manifest ' . $yamlUrl, ['app' => 'user_pods']);
+			throw new PodHostException('You are not allowed to start this image.');
+		}
 		// An image that writes into its mounted folder (NFS_RW: "yes" in the
 		// manifest) only works on a /storage/ mount: /files/ mounts are read-only.
 		// The dialog hides /files/ for such images; the API refuses it, so a
