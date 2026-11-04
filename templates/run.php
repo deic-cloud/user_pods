@@ -51,11 +51,13 @@
 			<a href="<?php p($_['pods_url']); ?>"><?php p($l->t('See your containers')); ?></a></p>
 		<script nonce="<?php p(\OCP\Server::get(\OC\Security\CSP\ContentSecurityPolicyNonceManager::class)->getNonce()); ?>">
 		(function () {
+			// Not OC.requestToken: the global OC is not defined on this page in NC34
+			// (ReferenceError on the first poll left the spinner turning for ever).
 			var pod = <?php print_unescaped(json_encode($_['pod'])); ?>;
 			var api = <?php print_unescaped(json_encode($_['containers_url'])); ?>;
 			var started = Date.now();
 			function poll() {
-				fetch(api, { headers: { 'OCS-APIRequest': 'true', 'requesttoken': OC.requestToken }, credentials: 'same-origin' })
+				fetch(api, { headers: { 'OCS-APIRequest': 'true', 'requesttoken': document.head.dataset.requesttoken || '' }, credentials: 'same-origin' })
 					.then(function (r) { return r.json(); })
 					.then(function (j) {
 						var list = Array.isArray(j) ? j : ((j && j.ocs && j.ocs.data) || []);
