@@ -426,6 +426,10 @@
 			status.textContent = text
 		}
 		setAllowedIPsBusy = true
+		if (status) {
+			status.classList.remove('ok', 'failed')
+			status.innerHTML = '<span class="icon-loading-small"></span>' + esc(t(APP, 'Updating firewall…'))
+		}
 		apiPost('api/pod/allowed-ips', { pod: podName, ips: ips }, 'Setting firewall rules…')
 			.then((json) => {
 				if (!hostOk(json)) {

@@ -603,3 +603,11 @@ input.keep_ports[type="checkbox"] {
 #podstable .allowed_ips_status.failed {
 	color: var(--color-error-text);
 }
+
+#podstable .allowed_ips_status .icon-loading-small {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+	margin-inline-end: 6px;
+}
