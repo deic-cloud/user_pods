@@ -227,7 +227,7 @@
 		// Who may reach the container's SSH and web ports (both firewalled to these addresses).
 		if (c.ssh_url || c.url) {
 			rows += '<tr><td class="expanded-column-name">access from:</td>'
-				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(c.allowed_ips || '') + '" data-saved="' + esc(c.allowed_ips || '') + '" />'
+				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(ipList(c.allowed_ips)) + '" data-saved="' + esc(ipList(c.allowed_ips)) + '" />'
 				+ '<label class="button add_current_ip" title="' + esc(t(APP, 'Add your current IP')) + '">+My IP</label>'
 				+ '<label class="button set_allowed_ips" title="' + esc(t(APP, 'Apply these addresses to the firewall (or press Enter)')) + '">' + esc(t(APP, 'Set')) + '</label>'
 				+ '<span class="allowed_ips_status" aria-live="polite"></span></span></td></tr>'
@@ -403,10 +403,17 @@
 		}, 10000)
 	}
 
+	// Comma-separated addresses without blanks or repeats. Without SSH the host
+	// reads the list from the web port, which has a TCP and a UDP rule per
+	// address, so each one used to arrive twice.
+	function ipList(s) {
+		return [...new Set(String(s || '').split(',').map((x) => x.trim()).filter((x) => x !== ''))].join(',')
+	}
+
 	// The allowed-IPs field differs from what the firewall has: say so.
 	function markAllowedIPs(input) {
 		const span = input.parentNode
-		const dirty = input.value.replace(/\s/g, '') !== (input.dataset.saved || '')
+		const dirty = ipList(input.value) !== (input.dataset.saved || '')
 		span.classList.toggle('unsaved', dirty)
 		const status = $('.allowed_ips_status', span)
 		if (status) {
@@ -416,7 +423,7 @@
 	}
 
 	function setAllowedIPs(podName, input) {
-		const ips = input.value.replace(/\s/g, '')
+		const ips = ipList(input.value)
 		const span = input.parentNode
 		const status = $('.allowed_ips_status', span)
 		const report = (ok, text) => {
