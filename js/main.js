@@ -227,8 +227,10 @@
 		// Who may reach the container's SSH and web ports (both firewalled to these addresses).
 		if (c.ssh_url || c.url) {
 			rows += '<tr><td class="expanded-column-name">access from:</td>'
-				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(c.allowed_ips || '') + '" />'
-				+ '<label class="button add_current_ip" title="' + esc(t(APP, 'Add your current IP')) + '">+My IP</label></span></td></tr>'
+				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(c.allowed_ips || '') + '" data-saved="' + esc(c.allowed_ips || '') + '" />'
+				+ '<label class="button add_current_ip" title="' + esc(t(APP, 'Add your current IP')) + '">+My IP</label>'
+				+ '<label class="button set_allowed_ips" title="' + esc(t(APP, 'Apply these addresses to the firewall (or press Enter)')) + '">' + esc(t(APP, 'Set')) + '</label>'
+				+ '<span class="allowed_ips_status" aria-live="polite"></span></span></td></tr>'
 		}
 		if (extraPorts) {
 			rows += '<tr><td class="expanded-column-name">extra ports:</td><td class="expanded-column-value"><span>' + esc(extraPorts) + '</span></td></tr>'
@@ -278,11 +280,20 @@
 		if (expanded) {
 			const ip = $('.expanded-row-ssh-ip input', expanded)
 			if (ip) {
+				// Nothing is applied while typing: only Enter or the Set button sends the
+				// list to the firewall. Until then the field is marked as not applied.
+				ip.addEventListener('input', () => markAllowedIPs(ip))
 				ip.addEventListener('keypress', function(e) {
 					if (e.which === 13 && !setAllowedIPsBusy) {
-						setAllowedIPs(c.pod_name, this.value)
+						setAllowedIPs(c.pod_name, ip)
 					}
 				})
+				const setIps = $('.set_allowed_ips', expanded)
+				if (setIps) {
+					setIps.addEventListener('click', () => {
+						if (!setAllowedIPsBusy) setAllowedIPs(c.pod_name, ip)
+					})
+				}
 			}
 			const addIp = $('.add_current_ip', expanded)
 			if (addIp) {
@@ -293,6 +304,7 @@
 					if (!cur.match(re)) {
 						cur = cur + (cur !== '' ? ',' : '') + clientIp
 						input.value = cur
+						markAllowedIPs(input)
 					}
 				})
 			}
@@ -391,16 +403,47 @@
 		}, 10000)
 	}
 
-	function setAllowedIPs(podName, ips) {
+	// The allowed-IPs field differs from what the firewall has: say so.
+	function markAllowedIPs(input) {
+		const span = input.parentNode
+		const dirty = input.value.replace(/\s/g, '') !== (input.dataset.saved || '')
+		span.classList.toggle('unsaved', dirty)
+		const status = $('.allowed_ips_status', span)
+		if (status) {
+			status.classList.remove('ok', 'failed')
+			status.textContent = dirty ? t(APP, 'Not applied yet - press Enter or Set') : ''
+		}
+	}
+
+	function setAllowedIPs(podName, input) {
+		const ips = input.value.replace(/\s/g, '')
+		const span = input.parentNode
+		const status = $('.allowed_ips_status', span)
+		const report = (ok, text) => {
+			if (!status) return
+			status.classList.remove('ok', 'failed')
+			status.classList.add(ok ? 'ok' : 'failed')
+			status.textContent = text
+		}
 		setAllowedIPsBusy = true
 		apiPost('api/pod/allowed-ips', { pod: podName, ips: ips }, 'Setting firewall rules…')
 			.then((json) => {
 				if (!hostOk(json)) {
+					report(false, t(APP, 'Not applied'))
 					alertError(t(APP, 'set_allowed_ips: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
 					setStatusText(podName, 'Setting allowed IPs failed')
+					return
 				}
+				input.value = ips
+				input.dataset.saved = ips
+				span.classList.remove('unsaved')
+				report(true, ips === '' ? t(APP, 'Firewall updated: open to all addresses')
+					: t(APP, 'Firewall updated'))
 			})
-			.catch((e) => alertError(t(APP, 'set_allowed_ips: Something went wrong. ') + e))
+			.catch((e) => {
+				report(false, t(APP, 'Not applied'))
+				alertError(t(APP, 'set_allowed_ips: Something went wrong. ') + e)
+			})
 			.finally(() => { setAllowedIPsBusy = false })
 	}
 

@@ -456,7 +456,8 @@
 	height: 8px;
 }
 
-.button.add_current_ip {
+.button.add_current_ip,
+.button.set_allowed_ips {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -577,4 +578,28 @@ input.keep_ports[type="checkbox"] {
 #podstable .expanded-row-ssh-ip input.allowed_ip {
 	width: 280px;
 	max-width: 60vw;
+}
+
+/* Allowed IPs typed but not yet sent to the firewall. */
+#podstable .expanded-row-ssh-ip.unsaved input.allowed_ip {
+	border-color: #c98a00;
+}
+
+#podstable .expanded-row-ssh-ip.unsaved .button.set_allowed_ips {
+	background-color: var(--color-primary-element);
+	color: var(--color-primary-element-text);
+}
+
+#podstable .allowed_ips_status {
+	font-size: 11px;
+	color: var(--color-text-maxcontrast);
+	white-space: nowrap;
+}
+
+#podstable .allowed_ips_status.ok {
+	color: #2d7d46;
+}
+
+#podstable .allowed_ips_status.failed {
+	color: var(--color-error-text);
 }
