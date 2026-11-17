@@ -168,6 +168,7 @@ span.pods-card-icon {
 .pods-icon-database { --pods-icon: url(../img/categories/database.svg); }
 .pods-icon-storage { --pods-icon: url(../img/categories/storage.svg); }
 .pods-icon-media { --pods-icon: url(../img/categories/media.svg); }
+.pods-icon-collaboration { --pods-icon: url(../img/categories/collaboration.svg); }
 .pods-icon-tools { --pods-icon: url(../img/categories/tools.svg); }
 .pods-icon-science { --pods-icon: url(../img/categories/science.svg); }
 .pods-icon-physics { --pods-icon: url(../img/categories/physics.svg); }

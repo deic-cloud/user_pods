@@ -475,6 +475,7 @@ class PodService {
 			'storage' => ['storage', 'object', 's3', 'file server', 'file'],
 			'media' => ['media', 'photo', 'video', 'music', 'book'],
 			'tools' => ['develop', 'tool', 'utilit', 'code'],
+			'collaboration' => ['collaborat', 'teach', 'writ', 'course'],
 			'linux' => ['linux', 'ubuntu', 'base', 'shell', 'terminal'],
 		];
 		foreach ($keys as $key => $words) {
