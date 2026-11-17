@@ -42,6 +42,7 @@ class PodService {
 		IAppConfig $appConfig,
 		private IClientService $clientService,
 		private GroupBridge $groups,
+		private SyncRuleBridge $syncRuleBridge,
 		private LoggerInterface $logger,
 		private ICacheFactory $cacheFactory,
 		private ?IGroupManager $groupManager = null,
@@ -1045,6 +1046,10 @@ class PodService {
 		}
 		if ($mountRoot === 'storage' && $mountPath !== '') {
 			$this->createStorageDir($uid, $mountPath);
+		}
+		// Pods keep their backups in Containers: not for the desktop sync clients
+		if (!$guest) {
+			$this->syncRuleBridge->hideContainersFromSync($uid);
 		}
 		$params = ['user_id' => $uid, 'yaml_url' => $yamlUrl];
 		if ($publicKey !== '') {

@@ -36,6 +36,10 @@ outside the mounted storage survives it.
 **Image catalog** — `/apps/user_pods/catalog` lists the images by category for
 everyone, logged in or not, each with a link that starts it (after login).
 
+#### Backups in `Containers` are not synced
+
+Images that keep state across restarts back it up to the folder `Containers` in the user's home folder (database dumps, state tarballs). Starting a container adds a locked "Hide from sync clients" rule for `/Containers` to files_sharding's folder visibility rules (shown as *Managed by user_pods* in the personal settings), so desktop sync clients neither list nor download it; the web interface and other WebDAV clients see it as usual. On upgrade to 0.19.4 a repair step adds the rule for every user who already has the folder. Without files_sharding nothing happens.
+
 ### Run this notebook
 
 A public notebook (a catalogue entry, or a public link to an `.ipynb` file)
