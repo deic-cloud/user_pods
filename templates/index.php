@@ -9,7 +9,7 @@
 	<div id="app-content-kubernetes" class="viewcontainer" data-client-ip="<?php p(\OCP\Server::get(\OCP\IRequest::class)->getRemoteAddress()); ?>">
 		<div class="pods-header">
 			<h2 class="pods-title"><?php p($l->t('Containers')); ?></h2>
-			<button id="pod-create" type="button" class="button primary pods-new-btn">
+			<button id="pod-create" type="button" class="button primary pods-new-btn"<?php if (!($_['mayUsePods'] ?? true)) { print_unescaped(' hidden style="display:none"'); } ?>>
 				<span class="pods-new-plus" aria-hidden="true">+</span> <?php p($l->t('New')); ?>
 			</button>
 			<button id="pods-reload" type="button" class="pods-icon-btn"
@@ -19,6 +19,9 @@
 				</svg>
 			</button>
 		</div>
+		<?php if (!($_['mayUsePods'] ?? true)): ?>
+		<p class="pods-no-access" style="margin:0 0 1em 0;color:var(--color-text-maxcontrast)"><?php p($l->t($_['noAccessMessage'])); ?></p>
+		<?php endif; ?>
 		<div id="loading">
 			<div id="loading-text"><?php p($l->t('Working…')); ?></div>
 			<div class="icon-loading-dark"></div>

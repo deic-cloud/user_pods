@@ -22,6 +22,8 @@ use Psr\Log\LoggerInterface;
  * Port of the OC7 OC_Kubernetes_Util.
  */
 class PodService {
+	public const NO_ACCESS_MESSAGE = 'Containers are available to accounts that log in through an institution (WAYF) and to invited collaborators. Contact support if you need access.';
+
 	private string $publicIP;
 	private string $podManagementIP;
 	private string $storageDir;
@@ -43,6 +45,7 @@ class PodService {
 		private IClientService $clientService,
 		private GroupBridge $groups,
 		private SyncRuleBridge $syncRuleBridge,
+		private PodAccess $podAccess,
 		private LoggerInterface $logger,
 		private ICacheFactory $cacheFactory,
 		private ?IGroupManager $groupManager = null,
@@ -1008,6 +1011,9 @@ class PodService {
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
 		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false): array {
+		if (!$guest && !$this->podAccess->mayUsePods($uid)) {
+			throw new PodHostException(self::NO_ACCESS_MESSAGE);
+		}
 		if (!$guest && $this->limitApplies($uid)) {
 			$running = count($this->getContainers($uid));
 			if ($running >= $this->maxPodsPerUser) {

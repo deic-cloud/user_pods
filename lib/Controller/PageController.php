@@ -28,6 +28,7 @@ class PageController extends Controller {
 		private IURLGenerator $urlGenerator,
 		private IL10N $l,
 		private IUserSession $userSession,
+		private \OCA\UserPods\Service\PodAccess $podAccess,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -35,7 +36,11 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function index(): TemplateResponse {
-		return new TemplateResponse('user_pods', 'index');
+		$uid = $this->userSession->getUser()?->getUID() ?? '';
+		return new TemplateResponse('user_pods', 'index', [
+			'mayUsePods' => $this->podAccess->mayUsePods($uid),
+			'noAccessMessage' => \OCA\UserPods\Service\PodService::NO_ACCESS_MESSAGE,
+		]);
 	}
 
 	/**
