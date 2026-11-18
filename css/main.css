@@ -611,3 +611,16 @@ input.keep_ports[type="checkbox"] {
 	vertical-align: middle;
 	margin-inline-end: 6px;
 }
+
+/* "Who may log in" (images with ScienceData login, catalog/oidc) */
+#login_group {
+	margin: 8px 0;
+}
+#login_group label {
+	margin-inline-end: 8px;
+}
+#login_group .pods-hint {
+	margin: 4px 0 0 0;
+	font-size: 0.9em;
+	color: var(--color-text-maxcontrast);
+}

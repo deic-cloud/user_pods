@@ -85,9 +85,25 @@ class ApiController extends Controller {
 	#[NoAdminRequired]
 	public function create(string $yaml_url, string $public_key = '', string $mount_root = '',
 		string $mount_path = '', string $cvmfs_repos = '', string $file = '', string $setup_script = '',
-		string $peers = '', string $allowed_ip = '', string $pod_type = ''): JSONResponse {
+		string $peers = '', string $allowed_ip = '', string $pod_type = '', string $login_group = ''): JSONResponse {
 		return $this->host(fn () => $this->pods->createPod($this->uid(), $yaml_url, $public_key, $mount_root,
-			$mount_path, $cvmfs_repos, $file, $setup_script, $peers, $allowed_ip, $pod_type));
+			$mount_path, $cvmfs_repos, $file, $setup_script, $peers, $allowed_ip, $pod_type, false, $login_group));
+	}
+
+	/**
+	 * Called by a pod at start, from inside (no credentials: the pod network's
+	 * address login makes the caller the pod's owner): its login client for
+	 * ScienceData accounts, or {oidc: false} when it keeps its own login.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function podLogin(): JSONResponse {
+		try {
+			$client = $this->pods->podLoginClient($this->uid(), $this->request->getRemoteAddress());
+		} catch (\Throwable $e) {
+			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_SERVICE_UNAVAILABLE);
+		}
+		return new JSONResponse($client === null ? ['oidc' => false] : ['oidc' => true] + $client);
 	}
 
 	#[NoAdminRequired]

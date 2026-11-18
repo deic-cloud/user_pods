@@ -36,6 +36,10 @@ outside the mounted storage survives it.
 **Image catalog** — `/apps/user_pods/catalog` lists the images by category for
 everyone, logged in or not, each with a link that starts it (after login).
 
+#### Logging in with ScienceData accounts (`catalog/oidc`, `lib/Service/PodLogin.php`)
+
+An image marked `catalog/oidc: "1"` can be started for one of the owner's groups (the dialog's *Who may log in*: *Just me* or *Members of …*, the owner's non-hidden groups). Started for a group, its members log in with their ScienceData accounts through the OpenID Connect provider on the master; started "just for me", the image keeps its own login (the provider can only restrict a client to groups). The login client needs the pod's exact address, known only once it runs, so the pod asks at start: `GET api/pod-login` from inside the pod, authenticated as its owner by the pod network's address login, answered with `{oidc: true, client_id, client_secret, issuer, authorization_url, token_url, userinfo_url, logout_url, group}` or `{oidc: false}`. The client is created on the master (files_sharding `internal/oidc/clients`), restricted to the group, with the redirect URI `https://<host>:<port>/oidc/login/callback`, kept encrypted in `user_pods_login`, and deleted with the pod. Needs files_sharding and the provider app `oidc` on the master.
+
 #### Optional SSH key (`catalog/ssh-optional`)
 
 An image that declares `SSH_PUBLIC_KEY` gets the key field in the dialog, and the key is required - unless the manifest has the annotation `catalog/ssh-optional: "1"`: images used through their web page (Overleaf, Moodle), where a key only adds a root shell. The field is then marked optional and may be left empty; run_pod starts the pod without a key.

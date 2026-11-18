@@ -79,6 +79,11 @@
 					</div>
 				</div>
 				<div id="pod_type" class="pods-hidden"><label><?php p($l->t('Instance type:')); ?></label></div>
+				<div id="login_group" class="pods-hidden">
+					<label for="login_group_select"><?php p($l->t('Who may log in:')); ?></label>
+					<select id="login_group_select"></select>
+					<p class="pods-hint"><?php p($l->t('For a group, its members log in with their ScienceData accounts and work on the projects shared with them in the container. Everyone who can log in can reach the projects of the others: start it only for people who trust each other.')); ?></p>
+				</div>
 				<div id="storage" class="pods-hidden"></div>
 				<div id="file" class="pods-hidden"><span id="file_text"><?php p($l->t('File')); ?>:</span>
 					<input id="file_input" type="text" placeholder="<?php p($l->t('Optional file to open in your container')); ?>"

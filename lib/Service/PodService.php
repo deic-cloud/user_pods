@@ -46,6 +46,7 @@ class PodService {
 		private GroupBridge $groups,
 		private SyncRuleBridge $syncRuleBridge,
 		private PodAccess $podAccess,
+		private PodLogin $podLogin,
 		private LoggerInterface $logger,
 		private ICacheFactory $cacheFactory,
 		private ?IGroupManager $groupManager = null,
@@ -344,6 +345,10 @@ class PodService {
 			'setup_script' => $setupScript,
 			'nfs_rw' => $nfsRw,
 			'pod_types' => $podTypes,
+			// catalog/oidc: may be started for a group, whose members then log in
+			// with their ScienceData accounts - offered with the user's groups
+			'login_groups' => (self::annotationOn($arr, 'catalog/oidc') && $this->podLogin->available())
+				? $this->podLogin->groupsFor($uid) : null,
 		];
 		return array_filter($ret, static fn ($v) => $v !== null);
 	}
@@ -1014,7 +1019,7 @@ class PodService {
 	/** Create a pod via run_pod.php. Returns the host's JSON response decoded. */
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
-		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false): array {
+		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false, string $loginGroup = ''): array {
 		if (!$guest && !$this->podAccess->mayUsePods($uid)) {
 			throw new PodHostException(self::NO_ACCESS_MESSAGE);
 		}
@@ -1042,6 +1047,18 @@ class PodService {
 		if (!is_array($labels) || !$this->mayLaunch($uid, $labels)) {
 			$this->logger->info('user_pods: ' . $uid . ' refused manifest ' . $yamlUrl, ['app' => 'user_pods']);
 			throw new PodHostException('You are not allowed to start this image.');
+		}
+		// For a group (images marked catalog/oidc): its members log in with their
+		// ScienceData accounts (PodLogin)
+		if ($loginGroup !== '' && !$guest) {
+			if (!self::annotationOn($manifest, 'catalog/oidc')) {
+				throw new PodHostException('This image cannot be started for a group.');
+			}
+			try {
+				$this->podLogin->checkGroup($uid, $loginGroup);
+			} catch (\RuntimeException $e) {
+				throw new PodHostException($e->getMessage());
+			}
 		}
 		// An image that writes into its mounted folder (NFS_RW: "yes" in the
 		// manifest) only works on a /storage/ mount: /files/ mounts are read-only.
@@ -1091,7 +1108,18 @@ class PodService {
 		}
 		$params['setup_script'] = $setupScript === '' ? '/dev/null' : $setupScript;
 		$json = $this->httpGet($this->podEndpoint('run_pod.php', $params), false);
-		return json_decode($json, true) ?: [];
+		$res = json_decode($json, true) ?: [];
+		$podName = (string)($res['data']['name'] ?? '');
+		if ($loginGroup !== '' && !$guest && ($res['status'] ?? '') === 'success' && $podName !== '') {
+			$this->podLogin->register($uid, $podName, $loginGroup);
+		}
+		return $res;
+	}
+
+	/** A manifest annotation switched on ("1", "true", "yes"). */
+	private static function annotationOn(mixed $manifest, string $key): bool {
+		$v = is_array($manifest) ? ($manifest['metadata']['annotations'][$key] ?? '') : '';
+		return in_array(strtolower(trim((string)$v)), ['1', 'true', 'yes'], true);
 	}
 
 	public function setAllowedIps(string $uid, string $podName, string $ips): array {
@@ -1109,7 +1137,24 @@ class PodService {
 	public function deletePod(string $uid, string $podName): array {
 		$json = $this->httpGet($this->podEndpoint('delete_pod.php',
 			['user_id' => $uid, 'pod' => $podName]), false);
-		return json_decode($json, true) ?: [];
+		$res = json_decode($json, true) ?: [];
+		if (($res['status'] ?? '') === 'success') {
+			$this->podLogin->forget($uid, $podName);
+		}
+		return $res;
+	}
+
+	/**
+	 * For a pod asking from inside (authenticated as its owner by its address):
+	 * its login client, or null when it keeps its own login.
+	 */
+	public function podLoginClient(string $uid, string $remoteAddr): ?array {
+		foreach ($this->getContainers($uid) as $c) {
+			if (($c['pod_ip'] ?? '') === $remoteAddr) {
+				return $this->podLogin->clientFor($uid, $c);
+			}
+		}
+		throw new PodHostException('No container of yours has this address.');
 	}
 
 	/** Raw log text for a pod (the controller turns this into a download). */

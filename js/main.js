@@ -375,6 +375,7 @@
 			setup_script: p.setup_script,
 			peers: p.peers,
 			pod_type: p.type,
+			login_group: p.login_group || '',
 			allowed_ip: clientIp,
 		}, 'Creating pod…')
 			.then((json) => {
@@ -575,6 +576,7 @@
 			show($('#cvmfs'), false)
 			$all('#pod_type select').forEach((s) => s.remove())
 			show($('#pod_type'), false)
+			show($('#login_group'), false)
 			$all('#setup input').forEach((i) => { i.value = '' })
 			show($('#setup'), false)
 			show($('#ssh'), false)
@@ -662,6 +664,15 @@
 		$all('#setup input').forEach((i) => { i.value = '' })
 		show($('#setup'), false)
 
+		// Images that log people in with ScienceData accounts (catalog/oidc): just
+		// the owner (the image's own login), or the members of one of their groups
+		const lg = $('#login_group_select')
+		lg.innerHTML = '<option value="">' + esc(t(APP, 'Just me')) + '</option>'
+		;(d.login_groups || []).forEach((g) => {
+			lg.insertAdjacentHTML('beforeend', '<option value="' + esc(g) + '">' + esc(t(APP, 'Members of {group}', { group: g })) + '</option>')
+		})
+		show($('#login_group'), Array.isArray(d.login_groups))
+
 		if (d.pod_types && d.pod_types.length) {
 			let sel = '<select title="' + esc(t(APP, 'Container type')) + '"><option value=""></option>'
 			d.pod_types.forEach((pt) => { sel += '<option value="' + esc(pt) + '">' + esc(pt) + '</option>' })
@@ -732,6 +743,7 @@
 		const peers = $('#peers_input').value || ''
 		const typeSel = $('#pod_type select')
 		const type = typeSel ? typeSel.value : ''
+		const loginGroup = $('#login_group').classList.contains('pods-hidden') ? '' : $('#login_group_select').value
 
 		const sshVisible = $('#ssh').style.display !== 'none' && $('#ssh').offsetParent !== null
 		if (sshVisible && !sshOptional && (!sshKey || sshKey === '')) {
@@ -748,7 +760,7 @@
 		}
 		runPod({
 			yaml_url: yamlUrl, ssh_key: sshKey, mount_root: mountRoot, mount_path: mountPath,
-			cvmfs_repos: cvmfsRepos, file: file, setup_script: setupScript, peers: peers, type: type,
+			cvmfs_repos: cvmfsRepos, file: file, setup_script: setupScript, peers: peers, type: type, login_group: loginGroup,
 		})
 	}
 
