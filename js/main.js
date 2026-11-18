@@ -173,8 +173,10 @@
 		})
 	}
 
-	// run_pod waits this long for a container to supply its address's path.
-	const TOKEN_WAIT_SECONDS = 300
+	// run_pod waits up to this long for a container to supply its address's path
+	// (sciencedata_kubernetes: 5 s polls for 5 minutes, then 30 s, to 30 minutes);
+	// a service such as Overleaf may take more than 5 minutes on a first start.
+	const TOKEN_WAIT_SECONDS = 1800
 
 	// Running, its image says a token is coming (catalog/wait-for-token), and
 	// the address does not have it yet: show no link, so nobody opens the
