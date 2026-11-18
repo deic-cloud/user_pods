@@ -70,8 +70,7 @@
 				<div id="login_group" class="pods-hidden">
 					<!-- before the description: who can use the container is the first thing to decide -->
 					<label for="login_group_select"><?php p($l->t('Who may log in:')); ?></label>
-					<select id="login_group_select"></select>
-					<p class="pods-hint"><?php p($l->t('For a group, its members log in with their ScienceData accounts and work on the projects shared with them in the container. Everyone who can log in can reach the projects of the others: start it only for people who trust each other.')); ?></p>
+					<select id="login_group_select" title="<?php p($l->t('For a group, its members log in with their ScienceData accounts.')); ?>"></select>
 				</div>
 				<div id="pods-reuse" class="pods-hidden"></div>
 				<div id="description" class="pods-hidden"></div>

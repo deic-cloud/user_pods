@@ -619,8 +619,3 @@ input.keep_ports[type="checkbox"] {
 #login_group label {
 	margin-inline-end: 8px;
 }
-#login_group .pods-hint {
-	margin: 4px 0 0 0;
-	font-size: 0.9em;
-	color: var(--color-text-maxcontrast);
-}
