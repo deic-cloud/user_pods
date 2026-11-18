@@ -196,7 +196,12 @@
 		if ((c.status || '').includes('Running') && c.url) {
 			return '<td><div data-column="view"><span><a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.url) + '</a></span></div></td>'
 		}
-		const text = (c.status || '').includes('Running') ? '—' : t(APP, 'Starting…')
+		// Not reachable (yet or any more): say why - starting, stopping, or neither
+		// (failed, ended, no web address)
+		const st = c.status || ''
+		const text = st.includes('Terminating') ? t(APP, 'Stopping…')
+			: (st === '' || st.includes('Pending')) ? t(APP, 'Starting…')
+				: '—'
 		return '<td><div data-column="view"><span>' + text + '</span></div></td>'
 	}
 
