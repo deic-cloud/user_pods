@@ -669,7 +669,7 @@
 		const lg = $('#login_group_select')
 		lg.innerHTML = '<option value="">' + esc(t(APP, 'Just me')) + '</option>'
 		;(d.login_groups || []).forEach((g) => {
-			lg.insertAdjacentHTML('beforeend', '<option value="' + esc(g) + '">' + esc(t(APP, 'Members of {group}', { group: g })) + '</option>')
+			lg.insertAdjacentHTML('beforeend', '<option value="' + esc(g) + '">' + esc(t(APP, 'Members of {group}', { group: g }, undefined, { escape: false })) + '</option>')
 		})
 		show($('#login_group'), Array.isArray(d.login_groups))
 
