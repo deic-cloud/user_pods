@@ -329,6 +329,9 @@ class PodService {
 			'manifest_url' => $yamlUrl,
 			'manifest_info' => $manifestInfo,
 			'pod_accepts_public_key' => $podAcceptsPublicKey,
+			// catalog/ssh-optional: the image is used through its web page; an SSH
+			// key only adds a root shell, so the dialog does not insist on one
+			'ssh_optional' => in_array(strtolower(trim((string)($arr['metadata']['annotations']['catalog/ssh-optional'] ?? ''))), ['1', 'true', 'yes'], true),
 			'pod_accepts_file' => $podAcceptsFile,
 			'pod_file' => $podFile,
 			'pod_peers' => $podPeers,

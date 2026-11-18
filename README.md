@@ -36,6 +36,10 @@ outside the mounted storage survives it.
 **Image catalog** — `/apps/user_pods/catalog` lists the images by category for
 everyone, logged in or not, each with a link that starts it (after login).
 
+#### Optional SSH key (`catalog/ssh-optional`)
+
+An image that declares `SSH_PUBLIC_KEY` gets the key field in the dialog, and the key is required - unless the manifest has the annotation `catalog/ssh-optional: "1"`: images used through their web page (Overleaf, Moodle), where a key only adds a root shell. The field is then marked optional and may be left empty; run_pod starts the pod without a key.
+
 #### Who may start containers (`lib/Service/PodAccess.php`)
 
 A container is a root shell next to the user's data, so it is for accounts whose identity is vouched for: accounts that have logged in through WAYF (recorded on the master by files_sharding's AccountPolicy), external collaborators invited by e-mail into a group (their group owner vouches for them), and the accounts on the admin's allow list (service accounts such as `cloud` and `batch`, exceptions). The deny list overrides everything. Local and test accounts with plain passwords may not; the page shows them a note instead of the New button, and the API refuses. Settings under *Administration → Containers*: `podRestrictToVouched` (on by default), `podAllowUsers`, `podDenyUsers`. On upgrade to 0.19.5 the allow list is seeded from `unlimitedPodUsers`. Without files_sharding the rule is off. Running containers are not affected; guest pods have their own switch.

@@ -604,6 +604,10 @@
 				show($('#description'), true)
 
 				show($('#ssh'), d.pod_accepts_public_key === true)
+				sshOptional = d.ssh_optional === true
+				$('#public_key').placeholder = sshOptional
+					? t(APP, 'Public SSH key (optional - only for a root shell in the container)')
+					: t(APP, 'Public SSH key')
 
 				if (d.pod_accepts_file === true) {
 					show($('#file'), true)
@@ -707,6 +711,9 @@
 		})
 	}
 
+	// The open image says an SSH key is optional (catalog/ssh-optional)
+	let sshOptional = false
+
 	function onLaunch() {
 		const yamlUrl = currentManifestUrl
 		const sshKey = $('#public_key').value
@@ -722,7 +729,7 @@
 		const type = typeSel ? typeSel.value : ''
 
 		const sshVisible = $('#ssh').style.display !== 'none' && $('#ssh').offsetParent !== null
-		if (sshVisible && (!sshKey || sshKey === '')) {
+		if (sshVisible && !sshOptional && (!sshKey || sshKey === '')) {
 			alertError(t(APP, 'Please fill in a public SSH key'))
 			return
 		}
