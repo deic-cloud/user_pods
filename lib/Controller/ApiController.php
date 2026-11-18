@@ -127,6 +127,21 @@ class ApiController extends Controller {
 		try {
 			return new DataDownloadResponse($this->pods->getLogs($this->uid(), $pod), $pod . '.log', 'text/plain');
 		} catch (PodHostException $e) {
+			// A container that has not started (its image still downloading,
+			// or being scheduled) has no log yet - the host answers with an
+			// error. Say what is going on instead.
+			$state = '';
+			try {
+				$c = $this->pods->getContainers($this->uid(), [$pod])[0] ?? null;
+				$state = $c === null ? '' : strtok((string)($c['status'] ?? ''), ':');
+			} catch (\Throwable) {
+			}
+			if ($state === 'Pending') {
+				return new DataDownloadResponse("The container has not started yet - its image may still be downloading, which takes a while for large images. Its log appears here once it runs.\n", $pod . '.log', 'text/plain');
+			}
+			if ($state === 'Terminating') {
+				return new DataDownloadResponse("The container is stopping; its log is no longer available.\n", $pod . '.log', 'text/plain');
+			}
 			$this->logger->error('user_pods: logs host call failed: ' . $e->getMessage(),
 				['app' => 'user_pods', 'exception' => $e]);
 			return new JSONResponse(

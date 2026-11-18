@@ -557,7 +557,11 @@
 		if (spinner) spinner.hidden = false
 		modal.hidden = false
 		fetch(logsUrl, { headers: { 'OCS-APIRequest': 'true', requesttoken: OC.requestToken } })
-			.then((r) => r.text())
+			.then((r) => r.text().then((text) => {
+				if (r.ok) return text
+				// an error answer: show its message, not the JSON around it
+				try { return t(APP, 'Could not load logs. ') + (JSON.parse(text).data.message || text) } catch (e) { return text }
+			}))
 			.then((text) => { $('#pods-logs-content').textContent = text || t(APP, '(no log output)') })
 			.catch((e) => { $('#pods-logs-content').textContent = t(APP, 'Could not load logs. ') + e })
 			.finally(() => { if (spinner) spinner.hidden = true })
