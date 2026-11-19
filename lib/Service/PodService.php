@@ -1149,9 +1149,14 @@ class PodService {
 	 * its login client, or null when it keeps its own login.
 	 */
 	public function podLoginClient(string $uid, string $remoteAddr): ?array {
+		return $this->podLogin->clientFor($uid, $this->containerAt($uid, $remoteAddr));
+	}
+
+	/** The container of $uid's that calls from $remoteAddr (its row from the container list). */
+	public function containerAt(string $uid, string $remoteAddr): array {
 		foreach ($this->getContainers($uid) as $c) {
 			if (($c['pod_ip'] ?? '') === $remoteAddr) {
-				return $this->podLogin->clientFor($uid, $c);
+				return $c;
 			}
 		}
 		throw new PodHostException('No container of yours has this address.');

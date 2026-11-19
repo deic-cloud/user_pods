@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\UserPods\Controller;
 
 use OCA\UserPods\Exception\PodHostException;
+use OCA\UserPods\Service\PodMail;
 use OCA\UserPods\Service\PodService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -22,6 +23,7 @@ class ApiController extends Controller {
 		string $appName,
 		IRequest $request,
 		private PodService $pods,
+		private PodMail $podMail,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
@@ -104,6 +106,34 @@ class ApiController extends Controller {
 			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
 		return new JSONResponse($client === null ? ['oidc' => false] : ['oidc' => true] + $client);
+	}
+
+	/**
+	 * Called by a pod (address login, as podLogin): send a mail message for an
+	 * application in it - JSON {to: [addresses], message: base64 of the whole
+	 * message}. See PodMail for what is checked and changed.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function podMail(array $to = [], string $message = ''): JSONResponse {
+		try {
+			$pod = (string)($this->pods->containerAt($this->uid(), $this->request->getRemoteAddress())['pod_name'] ?? '');
+			$raw = base64_decode($message, true);
+			if ($raw === false) {
+				throw new \InvalidArgumentException('The message must be base64');
+			}
+			$this->podMail->relay($this->uid(), $pod, $to, $raw);
+		} catch (PodHostException $e) {
+			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		} catch (\InvalidArgumentException $e) {
+			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+		} catch (\OverflowException $e) {
+			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_TOO_MANY_REQUESTS);
+		} catch (\Throwable $e) {
+			$this->logger->error('user_pods: pod mail not sent: ' . $e->getMessage(), ['app' => 'user_pods', 'exception' => $e]);
+			return new JSONResponse(['message' => 'The mail could not be sent.'], Http::STATUS_BAD_GATEWAY);
+		}
+		return new JSONResponse(['sent' => true]);
 	}
 
 	#[NoAdminRequired]
