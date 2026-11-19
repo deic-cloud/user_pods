@@ -24,7 +24,9 @@ use Psr\Log\LoggerInterface;
  * pod runs, so the pod asks for it at start (GET api/pod-login, from inside the
  * pod: authenticated as its owner by the pod network's address login). Then
  * the master (files_sharding OidcClients) creates the client, restricted to the
- * group, with the redirect URI https://<host>:<pod's port>/oidc/login/callback.
+ * group, with the redirect URI https://<host>:<pod's port><callback path> - the
+ * path named by the pod (Moodle: /admin/oauth2callback.php), by default
+ * Overleaf's /oidc/login/callback; a path only, so always the pod's own address.
  * Deleting the pod deletes the client.
  */
 class PodLogin {
@@ -78,8 +80,9 @@ class PodLogin {
 	 * time - or null when the pod logs people in itself (not a group pod).
 	 *
 	 * @param array $container the pod's row from the container list (pod_name, url)
+	 * @param string $callback path of the pod's login callback ('' = Overleaf's)
 	 */
-	public function clientFor(string $uid, array $container): ?array {
+	public function clientFor(string $uid, array $container, string $callback = ''): ?array {
 		$pod = (string)($container['pod_name'] ?? '');
 		$row = $this->row($uid, $pod);
 		if ($row === null) {
@@ -92,9 +95,15 @@ class PodLogin {
 		if (!preg_match('#^https://[^/]+:\d+$#', $base)) {
 			throw new \RuntimeException('The container has no web address yet.');
 		}
+		if ($callback === '') {
+			$callback = '/oidc/login/callback';
+		}
+		if (!preg_match('#^(/[A-Za-z0-9._-]+)+$#', $callback) || str_contains($callback, '/..')) {
+			throw new \RuntimeException('Invalid login callback path.');
+		}
 		$client = $this->master('internal/oidc/clients', [
 			'name' => 'Container ' . $pod,
-			'redirect_uri' => $base . '/oidc/login/callback',
+			'redirect_uri' => $base . $callback,
 			'gid' => (string)$row['gid'],
 		]);
 		if (empty($client['client_id'])) {

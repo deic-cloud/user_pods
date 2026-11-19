@@ -1151,8 +1151,8 @@ class PodService {
 	 * For a pod asking from inside (authenticated as its owner by its address):
 	 * its login client, or null when it keeps its own login.
 	 */
-	public function podLoginClient(string $uid, string $remoteAddr): ?array {
-		return $this->podLogin->clientFor($uid, $this->containerAt($uid, $remoteAddr));
+	public function podLoginClient(string $uid, string $remoteAddr, string $callback = ''): ?array {
+		return $this->podLogin->clientFor($uid, $this->containerAt($uid, $remoteAddr), $callback);
 	}
 
 	/** The container of $uid's that calls from $remoteAddr (its row from the container list). */

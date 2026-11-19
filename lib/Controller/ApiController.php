@@ -96,12 +96,14 @@ class ApiController extends Controller {
 	 * Called by a pod at start, from inside (no credentials: the pod network's
 	 * address login makes the caller the pod's owner): its login client for
 	 * ScienceData accounts, or {oidc: false} when it keeps its own login.
+	 * callback: the path the application in the pod takes logins back at
+	 * (default Overleaf's), fixed when the client is made.
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function podLogin(): JSONResponse {
+	public function podLogin(string $callback = ''): JSONResponse {
 		try {
-			$client = $this->pods->podLoginClient($this->uid(), $this->request->getRemoteAddress());
+			$client = $this->pods->podLoginClient($this->uid(), $this->request->getRemoteAddress(), $callback);
 		} catch (\Throwable $e) {
 			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
