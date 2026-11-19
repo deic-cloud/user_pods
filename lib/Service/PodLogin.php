@@ -13,10 +13,12 @@ use Psr\Log\LoggerInterface;
 /**
  * Logging in to a pod with ScienceData accounts (OpenID Connect).
  *
- * An image marked catalog/oidc can be started for one of the owner's groups:
- * then only that group's members can log in, with their ScienceData accounts.
- * (Started "just for me", the pod keeps its own local login - the provider can
- * only restrict a client to groups.)
+ * An image marked catalog/oidc logs people in with their ScienceData accounts.
+ * Started for one of the owner's groups, only that group's members can (the
+ * provider restricts the client to the group). Started "just for me", the
+ * client is unrestricted - the provider can only restrict to groups - and the
+ * image itself admits only the owner (the 'group' in the pod's answer is '').
+ * Pods started before this have no row and keep their own local login.
  *
  * The login client needs the pod's exact address, which is only known once the
  * pod runs, so the pod asks for it at start (GET api/pod-login, from inside the
@@ -59,7 +61,7 @@ class PodLogin {
 		}
 	}
 
-	/** After run_pod: remember that this pod's users log in as members of $gid. */
+	/** After run_pod: remember that this pod's users log in as members of $gid ('' = just the owner). */
 	public function register(string $uid, string $pod, string $gid): void {
 		$this->forget($uid, $pod); // a stale row of an earlier pod with the same name
 		$qb = $this->db->getQueryBuilder();

@@ -1110,7 +1110,10 @@ class PodService {
 		$json = $this->httpGet($this->podEndpoint('run_pod.php', $params), false);
 		$res = json_decode($json, true) ?: [];
 		$podName = (string)($res['data']['name'] ?? '');
-		if ($loginGroup !== '' && !$guest && ($res['status'] ?? '') === 'success' && $podName !== '') {
+		// Images marked catalog/oidc log people in with their accounts here - the
+		// group's members, or just the owner ('' - the image admits no one else)
+		if (!$guest && ($res['status'] ?? '') === 'success' && $podName !== ''
+			&& self::annotationOn($manifest, 'catalog/oidc') && $this->podLogin->available()) {
 			$this->podLogin->register($uid, $podName, $loginGroup);
 		}
 		return $res;
