@@ -10,7 +10,7 @@ namespace OCA\UserPods\Service;
  * a longer text needs: paragraphs over several lines, numbered lists, quotes,
  * heading anchors. Everything is escaped first and markup applied after, so no
  * HTML from the file gets through. Links: http(s), site-relative /..., #...,
- * and other guides by their file name (name.guide.md), mapped by $guideUrl.
+ * mailto:, and other guides by their file name (name.guide.md), mapped by $guideUrl.
  */
 class MarkdownLite {
 	/** @param callable(string $image): string $guideUrl */
@@ -108,7 +108,7 @@ class MarkdownLite {
 		$s = preg_replace('/(^|[^\w`])_([^_]+)_(?=[^\w`]|$)/', '$1<em>$2</em>', $s);
 		$s = preg_replace_callback('/\[([^\]]+)\]\(([a-z0-9][a-z0-9_.-]*)\.guide\.md(#[a-z0-9-]*)?\)/',
 			static fn ($m) => '<a href="' . self::esc($guideUrl($m[2]) . ($m[3] ?? '')) . '">' . $m[1] . '</a>', $s);
-		$s = preg_replace('/\[([^\]]+)\]\((#[^)\s]*)\)/', '<a href="$2">$1</a>', $s);
+		$s = preg_replace('/\[([^\]]+)\]\((#[^)\s]*|mailto:[^)\s@]+@[^)\s]+)\)/', '<a href="$2">$1</a>', $s);
 		$s = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*)\)/',
 			'<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>', $s);
 		return $s;

@@ -108,6 +108,8 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	public function guide(string $image): TemplateResponse {
 		$md = $this->pods->guideMarkdown($image);
+		// %support_email%: the service's support address (system config 'fromemail')
+		$md = str_replace('%support_email%', (string)\OCP\Server::get(\OCP\IConfig::class)->getSystemValue('fromemail', ''), $md);
 		$title = \OCA\UserPods\Service\MarkdownLite::title($md);
 		$response = new PublicTemplateResponse('user_pods', 'guide', [
 			'html' => $md === '' ? '' : \OCA\UserPods\Service\MarkdownLite::toHtml($md,
