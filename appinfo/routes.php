@@ -21,6 +21,7 @@ return [
 		// asked by a pod at start: its login client for ScienceData accounts (PodLogin)
 		['name' => 'api#podLogin',    'url' => '/api/pod-login',       'verb' => 'GET'],
 		['name' => 'api#podMail',     'url' => '/api/pod-mail',        'verb' => 'POST'],
+		['name' => 'api#podMembers',  'url' => '/api/pod-members',     'verb' => 'GET'],
 		['name' => 'api#runNotebook', 'url' => '/api/run-notebook',    'verb' => 'POST'],
 		['name' => 'api#delete',      'url' => '/api/pod/delete',      'verb' => 'POST'],
 		['name' => 'api#allowedIps',  'url' => '/api/pod/allowed-ips', 'verb' => 'POST'],

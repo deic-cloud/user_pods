@@ -69,8 +69,9 @@
 				<div id="newpod-spinner" class="icon-loading" hidden></div>
 				<div id="login_group" class="pods-hidden">
 					<!-- before the description: who can use the container is the first thing to decide -->
-					<label for="login_group_select"><?php p($l->t('Who may log in:')); ?></label>
-					<select id="login_group_select" title="<?php p($l->t('For a group, its members log in with their ScienceData accounts.')); ?>"></select>
+					<div class="login-group-title" title="<?php p($l->t('You log in with your account here; the members of the groups you tick log in with theirs.')); ?>"><?php p($l->t('Who may log in: you, and the members of')); ?></div>
+					<div id="login_group_list"></div>
+					<p class="login-group-none"><?php p($l->t('(no group ticked: just you)')); ?></p>
 				</div>
 				<div id="pods-reuse" class="pods-hidden"></div>
 				<div id="description" class="pods-hidden"></div>

@@ -616,6 +616,24 @@ input.keep_ports[type="checkbox"] {
 #login_group {
 	margin: 8px 0;
 }
-#login_group label {
-	margin-inline-end: 8px;
+#login_group .login-group-title {
+	margin-bottom: 4px;
+}
+#login_group_list label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 2px 0;
+	cursor: pointer;
+}
+#login_group #login_group_list input[type=checkbox] {
+	width: auto;
+	min-height: 0;
+	margin: 0;
+}
+#login_group .login-group-none {
+	color: var(--color-text-maxcontrast);
+}
+#login_group_list:has(input:checked) + .login-group-none {
+	display: none;
 }

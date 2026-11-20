@@ -375,7 +375,7 @@
 			setup_script: p.setup_script,
 			peers: p.peers,
 			pod_type: p.type,
-			login_group: p.login_group || '',
+			login_groups: JSON.stringify(p.login_groups || []),
 			allowed_ip: clientIp,
 		}, 'Creating pod…')
 			.then((json) => {
@@ -668,12 +668,12 @@
 		$all('#setup input').forEach((i) => { i.value = '' })
 		show($('#setup'), false)
 
-		// Images that log people in with ScienceData accounts (catalog/oidc): just
-		// the owner (the image's own login), or the members of one of their groups
-		const lg = $('#login_group_select')
-		lg.innerHTML = '<option value="">' + esc(t(APP, 'Just me')) + '</option>'
+		// Images that log people in with ScienceData accounts (catalog/oidc): the
+		// owner, and the members of the groups ticked (none: just the owner)
+		const lg = $('#login_group_list')
+		lg.innerHTML = ''
 		;(d.login_groups || []).forEach((g) => {
-			lg.insertAdjacentHTML('beforeend', '<option value="' + esc(g) + '">' + esc(t(APP, 'Members of {group}', { group: g }, undefined, { escape: false })) + '</option>')
+			lg.insertAdjacentHTML('beforeend', '<label><input type="checkbox" value="' + esc(g) + '">' + esc(g) + '</label>')
 		})
 		show($('#login_group'), Array.isArray(d.login_groups))
 
@@ -747,7 +747,8 @@
 		const peers = $('#peers_input').value || ''
 		const typeSel = $('#pod_type select')
 		const type = typeSel ? typeSel.value : ''
-		const loginGroup = $('#login_group').classList.contains('pods-hidden') ? '' : $('#login_group_select').value
+		const loginGroups = $('#login_group').classList.contains('pods-hidden') ? []
+			: $all('#login_group_list input:checked').map((i) => i.value)
 
 		const sshVisible = $('#ssh').style.display !== 'none' && $('#ssh').offsetParent !== null
 		if (sshVisible && !sshOptional && (!sshKey || sshKey === '')) {
@@ -764,7 +765,7 @@
 		}
 		runPod({
 			yaml_url: yamlUrl, ssh_key: sshKey, mount_root: mountRoot, mount_path: mountPath,
-			cvmfs_repos: cvmfsRepos, file: file, setup_script: setupScript, peers: peers, type: type, login_group: loginGroup,
+			cvmfs_repos: cvmfsRepos, file: file, setup_script: setupScript, peers: peers, type: type, login_groups: loginGroups,
 		})
 	}
 

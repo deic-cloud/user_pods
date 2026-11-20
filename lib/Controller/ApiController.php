@@ -87,9 +87,13 @@ class ApiController extends Controller {
 	#[NoAdminRequired]
 	public function create(string $yaml_url, string $public_key = '', string $mount_root = '',
 		string $mount_path = '', string $cvmfs_repos = '', string $file = '', string $setup_script = '',
-		string $peers = '', string $allowed_ip = '', string $pod_type = '', string $login_group = ''): JSONResponse {
+		string $peers = '', string $allowed_ip = '', string $pod_type = '', string $login_group = '',
+		string $login_groups = ''): JSONResponse {
+		// login_groups: JSON list (group names may hold any character); login_group: one (older pages)
+		$groups = json_decode($login_groups, true);
+		$groups = is_array($groups) ? $groups : ($login_group === '' ? [] : [$login_group]);
 		return $this->host(fn () => $this->pods->createPod($this->uid(), $yaml_url, $public_key, $mount_root,
-			$mount_path, $cvmfs_repos, $file, $setup_script, $peers, $allowed_ip, $pod_type, false, $login_group));
+			$mount_path, $cvmfs_repos, $file, $setup_script, $peers, $allowed_ip, $pod_type, false, $groups));
 	}
 
 	/**
@@ -111,6 +115,22 @@ class ApiController extends Controller {
 	}
 
 	/**
+	 * Called by a pod (address login, as podLogin): the accepted members of the
+	 * groups that log in to it - {groups: {gid: [{uid, name}, ...]}} - e.g. for
+	 * Moodle's cohorts. {groups: {}} for a pod just for its owner.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function podMembers(): JSONResponse {
+		try {
+			$members = $this->pods->podMembers($this->uid(), $this->request->getRemoteAddress());
+		} catch (PodHostException $e) {
+			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+		return new JSONResponse(['groups' => (object)($members ?? [])]);
+	}
+
+	/**
 	 * Called by a pod (address login, as podLogin): send a mail message for an
 	 * application in it - JSON {to: [addresses], message: base64 of the whole
 	 * message}. See PodMail for what is checked and changed.
@@ -119,12 +139,13 @@ class ApiController extends Controller {
 	#[NoCSRFRequired]
 	public function podMail(array $to = [], string $message = ''): JSONResponse {
 		try {
-			$pod = (string)($this->pods->containerAt($this->uid(), $this->request->getRemoteAddress())['pod_name'] ?? '');
+			$container = $this->pods->containerAt($this->uid(), $this->request->getRemoteAddress());
+			$pod = (string)($container['pod_name'] ?? '');
 			$raw = base64_decode($message, true);
 			if ($raw === false) {
 				throw new \InvalidArgumentException('The message must be base64');
 			}
-			$this->podMail->relay($this->uid(), $pod, $to, $raw);
+			$this->podMail->relay($this->uid(), $pod, $to, $raw, $this->pods->podAudience($this->uid(), $container));
 		} catch (PodHostException $e) {
 			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
 		} catch (\InvalidArgumentException $e) {

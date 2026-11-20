@@ -20,15 +20,17 @@ use Symfony\Component\Mime\RawMessage;
  * The pod hands over a complete message plus its recipients. Here the sender
  * becomes this server's no-reply address (the message's display name is kept,
  * sanitized), whatever the pod wrote; Bcc/Sender/Return-Path headers are
- * dropped; size, recipients and rate are limited per owner; every message is
- * logged with its owner, pod, recipients and subject.
+ * dropped; size, recipients and rate are limited per owner - the rate scaled
+ * by how many accounts may log in to the pod (its groups' members: a Moodle
+ * notifies every student of a course); every message is logged with its
+ * owner, pod, recipients and subject.
  */
 class PodMail {
 	public const MAX_BYTES = 2 * 1024 * 1024;
 	public const MAX_RECIPIENTS = 10;
-	public const PER_HOUR = 20;
-	public const PER_DAY = 100;
-	private const PREF = 'mail_sent'; // user value: JSON list of send times (last 24 h)
+	public const PER_HOUR = 20;   // at least; or 2 per account that may log in
+	public const PER_DAY = 100;   // at least; or 10 per account that may log in
+	private const PREF = 'mail_sent'; // user value: JSON {hour (unix time / 3600): messages}, last 24 h
 
 	public function __construct(
 		private IConfig $config,
@@ -41,7 +43,7 @@ class PodMail {
 	 * @throws \InvalidArgumentException a bad message or recipient
 	 * @throws \OverflowException over the rate limit
 	 */
-	public function relay(string $uid, string $pod, array $to, string $raw): void {
+	public function relay(string $uid, string $pod, array $to, string $raw, int $audience = 1): void {
 		$to = array_values(array_unique(array_map(static fn ($a) => trim((string)$a), $to)));
 		if ($to === [] || count($to) > self::MAX_RECIPIENTS) {
 			throw new \InvalidArgumentException('1 to ' . self::MAX_RECIPIENTS . ' recipients per message');
@@ -56,23 +58,25 @@ class PodMail {
 		}
 		$from = Util::getDefaultEmailAddress('no-reply');
 		[$message, $subject] = $this->withSender($raw, $from);
-		$this->countSend($uid);
+		$this->countSend($uid, $audience);
 		$this->transport()->send(new RawMessage($message), new Envelope(new Address($from), array_map(static fn ($a) => new Address($a), $to)));
 		$this->logger->info("user_pods: mail from container $pod of $uid to " . implode(', ', $to) . ": $subject", ['app' => 'user_pods']);
 	}
 
 	/** Note a send now, or refuse when over the hourly or daily limit. */
-	private function countSend(string $uid): void {
-		$now = time();
-		$times = json_decode($this->config->getUserValue($uid, 'user_pods', self::PREF, '[]'), true);
-		$times = array_values(array_filter(is_array($times) ? $times : [], static fn ($t) => is_int($t) && $t > $now - 86400));
-		$lastHour = count(array_filter($times, static fn ($t) => $t > $now - 3600));
-		if ($lastHour >= self::PER_HOUR || count($times) >= self::PER_DAY) {
+	private function countSend(string $uid, int $audience): void {
+		$perHour = max(self::PER_HOUR, 2 * $audience);
+		$perDay = max(self::PER_DAY, 10 * $audience);
+		$hour = intdiv(time(), 3600);
+		$counts = json_decode($this->config->getUserValue($uid, 'user_pods', self::PREF, '{}'), true);
+		$counts = is_array($counts) && !array_is_list($counts) ? $counts : []; // (was a list of times)
+		$counts = array_filter($counts, static fn ($n, $h) => (int)$h > $hour - 24, ARRAY_FILTER_USE_BOTH);
+		if (($counts[$hour] ?? 0) >= $perHour || array_sum($counts) >= $perDay) {
 			$this->logger->warning("user_pods: mail from a container of $uid refused: over the limit", ['app' => 'user_pods']);
-			throw new \OverflowException('Your containers may send ' . self::PER_HOUR . ' messages per hour and ' . self::PER_DAY . ' per day.');
+			throw new \OverflowException("Your containers may send $perHour messages per hour and $perDay per day.");
 		}
-		$times[] = $now;
-		$this->config->setUserValue($uid, 'user_pods', self::PREF, json_encode($times));
+		$counts[$hour] = ($counts[$hour] ?? 0) + 1;
+		$this->config->setUserValue($uid, 'user_pods', self::PREF, json_encode((object)$counts));
 	}
 
 	/**

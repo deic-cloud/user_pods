@@ -42,6 +42,32 @@ class GroupBridge {
 		}
 	}
 
+	/** The accepted members of $gid: [['uid' => ..., 'name' => display name], ...], sorted by uid. */
+	public function membersOf(string $gid): array {
+		if ($gid === '' || !$this->available() || !class_exists('\\OCA\\UserGroupAdmin\\Db\\GroupMemberMapper')) {
+			return [];
+		}
+		try {
+			$users = Server::get(\OCP\IUserManager::class);
+			$out = [];
+			foreach (Server::get('\\OCA\\UserGroupAdmin\\Db\\GroupMemberMapper')->findByGid($gid) as $m) {
+				$uid = (string)$m->getUid();
+				// accepted members with an account (not pending invitations, not the
+				// placeholder of e-mail invitations, uga_external)
+				if ((int)$m->getStatus() !== 1 || $uid === '' || $uid === 'uga_external') {
+					continue;
+				}
+				$u = $users->get($uid);
+				$name = ($u !== null && strcasecmp($u->getUID(), $uid) === 0) ? $u->getDisplayName() : $uid;
+				$out[] = ['uid' => $uid, 'name' => $name];
+			}
+			usort($out, static fn ($a, $b) => strcmp($a['uid'], $b['uid']));
+			return $out;
+		} catch (\Throwable $e) {
+			return [];
+		}
+	}
+
 	public function inGroup(string $uid, string $gid): bool {
 		if ($uid === '' || $gid === '' || !$this->available()) {
 			return false;

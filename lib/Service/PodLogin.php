@@ -53,26 +53,72 @@ class PodLogin {
 		return $this->groups->visibleGroupsOf($uid);
 	}
 
-	/** Before starting: may $uid start a pod for $gid? */
-	public function checkGroup(string $uid, string $gid): void {
+	/** Before starting: may $uid start a pod for these groups? @param string[] $gids */
+	public function checkGroups(string $uid, array $gids): void {
 		if (!$this->available()) {
 			throw new \RuntimeException('Logging in with ScienceData accounts is not available on this server.');
 		}
-		if (!in_array($gid, $this->groupsFor($uid), true)) {
-			throw new \RuntimeException('You can only start a container for a group you are a member of.');
+		$mine = $this->groupsFor($uid);
+		foreach ($gids as $gid) {
+			if (!in_array($gid, $mine, true)) {
+				throw new \RuntimeException('You can only start a container for groups you are a member of.');
+			}
 		}
 	}
 
-	/** After run_pod: remember that this pod's users log in as members of $gid ('' = just the owner). */
-	public function register(string $uid, string $pod, string $gid): void {
+	/**
+	 * After run_pod: remember that this pod's users log in as members of these
+	 * groups (none = just the owner). gid keeps the first, for rows read by an
+	 * older version. @param string[] $gids
+	 */
+	public function register(string $uid, string $pod, array $gids): void {
 		$this->forget($uid, $pod); // a stale row of an earlier pod with the same name
+		$gids = array_values(array_unique(array_filter(array_map('strval', $gids), static fn ($g) => $g !== '')));
 		$qb = $this->db->getQueryBuilder();
 		$qb->insert(self::TABLE)->values([
 			'pod' => $qb->createNamedParameter($pod),
 			'owner' => $qb->createNamedParameter($uid),
-			'gid' => $qb->createNamedParameter($gid),
+			'gid' => $qb->createNamedParameter($gids[0] ?? ''),
+			'gids' => $qb->createNamedParameter(json_encode($gids)),
 			'created_at' => $qb->createNamedParameter(time()),
 		])->executeStatement();
+	}
+
+	/** The groups whose members log in to the pod in $row (none = just the owner). @return string[] */
+	private static function gidsOf(array $row): array {
+		$gids = json_decode((string)($row['gids'] ?? ''), true);
+		if (is_array($gids)) {
+			return array_values(array_map('strval', $gids));
+		}
+		return (string)($row['gid'] ?? '') === '' ? [] : [(string)$row['gid']];
+	}
+
+	/**
+	 * For the pod asking: the accepted members of its groups, per group -
+	 * [gid => [['uid' => ..., 'name' => display name], ...]] (e.g. for Moodle's
+	 * cohorts). [] for a pod just for its owner; null for no such pod.
+	 */
+	public function membersFor(string $uid, array $container): ?array {
+		$row = $this->row($uid, (string)($container['pod_name'] ?? ''));
+		if ($row === null) {
+			return null;
+		}
+		$out = [];
+		foreach (self::gidsOf($row) as $gid) {
+			$out[$gid] = $this->groups->membersOf($gid);
+		}
+		return $out;
+	}
+
+	/** How many accounts may log in to the pod in $container (the owner + its groups' members). */
+	public function audience(string $uid, array $container): int {
+		$members = [$uid => true];
+		foreach ($this->membersFor($uid, $container) ?? [] as $list) {
+			foreach ($list as $m) {
+				$members[$m['uid']] = true;
+			}
+		}
+		return count($members);
 	}
 
 	/**
@@ -104,12 +150,14 @@ class PodLogin {
 		$client = $this->master('internal/oidc/clients', [
 			'name' => 'Container ' . $pod,
 			'redirect_uri' => $base . $callback,
-			'gid' => (string)$row['gid'],
+			'gids' => self::gidsOf($row),
 		]);
 		if (empty($client['client_id'])) {
 			throw new \RuntimeException('The master could not create a login client: ' . ($client['message'] ?? 'no answer'));
 		}
-		$client['group'] = (string)$row['gid'];
+		// group: '' = just the owner (the image then admits only them); groups: all of them
+		$client['groups'] = self::gidsOf($row);
+		$client['group'] = $client['groups'][0] ?? '';
 		$qb = $this->db->getQueryBuilder();
 		$qb->update(self::TABLE)
 			->set('client_id', $qb->createNamedParameter($client['client_id']))

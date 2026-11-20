@@ -1019,7 +1019,8 @@ class PodService {
 	/** Create a pod via run_pod.php. Returns the host's JSON response decoded. */
 	public function createPod(string $uid, string $yamlUrl, string $publicKey, string $mountRoot,
 		string $mountPath, string $cvmfsRepos = '', string $file = '', string $setupScript = '',
-		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false, string $loginGroup = ''): array {
+		string $peers = '', string $allowedIp = '', string $podType = '', bool $guest = false, array $loginGroups = []): array {
+		$loginGroups = array_values(array_unique(array_filter(array_map('strval', $loginGroups), static fn ($g) => $g !== '')));
 		if (!$guest && !$this->podAccess->mayUsePods($uid)) {
 			throw new PodHostException(self::NO_ACCESS_MESSAGE);
 		}
@@ -1048,14 +1049,14 @@ class PodService {
 			$this->logger->info('user_pods: ' . $uid . ' refused manifest ' . $yamlUrl, ['app' => 'user_pods']);
 			throw new PodHostException('You are not allowed to start this image.');
 		}
-		// For a group (images marked catalog/oidc): its members log in with their
+		// For groups (images marked catalog/oidc): their members log in with their
 		// ScienceData accounts (PodLogin)
-		if ($loginGroup !== '' && !$guest) {
+		if ($loginGroups !== [] && !$guest) {
 			if (!self::annotationOn($manifest, 'catalog/oidc')) {
 				throw new PodHostException('This image cannot be started for a group.');
 			}
 			try {
-				$this->podLogin->checkGroup($uid, $loginGroup);
+				$this->podLogin->checkGroups($uid, $loginGroups);
 			} catch (\RuntimeException $e) {
 				throw new PodHostException($e->getMessage());
 			}
@@ -1114,7 +1115,7 @@ class PodService {
 		// group's members, or just the owner ('' - the image admits no one else)
 		if (!$guest && ($res['status'] ?? '') === 'success' && $podName !== ''
 			&& self::annotationOn($manifest, 'catalog/oidc') && $this->podLogin->available()) {
-			$this->podLogin->register($uid, $podName, $loginGroup);
+			$this->podLogin->register($uid, $podName, $loginGroups);
 		}
 		return $res;
 	}
@@ -1153,6 +1154,16 @@ class PodService {
 	 */
 	public function podLoginClient(string $uid, string $remoteAddr, string $callback = ''): ?array {
 		return $this->podLogin->clientFor($uid, $this->containerAt($uid, $remoteAddr), $callback);
+	}
+
+	/** For the pod calling from $remoteAddr: the members of its login groups (PodLogin::membersFor). */
+	public function podMembers(string $uid, string $remoteAddr): ?array {
+		return $this->podLogin->membersFor($uid, $this->containerAt($uid, $remoteAddr));
+	}
+
+	/** How many accounts may log in to the pod calling from $remoteAddr (PodLogin::audience). */
+	public function podAudience(string $uid, array $container): int {
+		return $this->podLogin->audience($uid, $container);
 	}
 
 	/** The container of $uid's that calls from $remoteAddr (its row from the container list). */
