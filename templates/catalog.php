@@ -23,6 +23,9 @@ $card = static function (array $e) use ($l, $_): void { ?>
 			<?php if ($e['restricted']) { ?>
 				<span class="pods-card-badge"><?php p($l->t('Restricted')); ?></span>
 			<?php } ?>
+			<?php if (!empty($e['guide'])) { ?>
+				<a class="pods-card-guide" href="<?php p(\OCP\Server::get(\OCP\IURLGenerator::class)->linkToRoute('user_pods.page.guide', ['image' => $e['guide']])); ?>"><?php p($l->t('Guide')); ?></a>
+			<?php } ?>
 			<a class="button pods-card-launch" href="<?php p($_['launchUrl'] . '?yaml_file=' . rawurlencode($e['file'])); ?>"><?php p($l->t('Launch')); ?></a>
 		</div>
 	</div>

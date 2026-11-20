@@ -12,6 +12,8 @@ return [
 		['name' => 'page#runGuestStart', 'url' => '/guest/start', 'verb' => 'POST'],
 		// The image catalog as a public page, with Launch links into the app.
 		['name' => 'page#catalog', 'url' => '/catalog', 'verb' => 'GET'],
+		// An image's guide (<image>.guide.md beside its manifest), public like the catalog.
+		['name' => 'page#guide', 'url' => '/guide/{image}', 'verb' => 'GET'],
 
 		// Pod management — thin JSON API over the sciencedata_kubernetes host service.
 		['name' => 'api#containers',  'url' => '/api/containers',      'verb' => 'GET'],

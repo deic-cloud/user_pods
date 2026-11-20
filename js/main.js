@@ -70,6 +70,9 @@
 			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 			.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
 			.replace(/(^|[^\w`])_([^_]+)_(?=[^\w`]|$)/g, '$1<em>$2</em>')
+			// another file beside the manifests: an image's guide, shown by this app
+			.replace(/\[([^\]]+)\]\(([a-z0-9][a-z0-9_.-]*)\.guide\.md(#[a-z0-9-]*)?\)/g, (m, text, name, anchor) =>
+				'<a href="' + OC.generateUrl('/apps/user_pods/guide/' + name) + (anchor || '') + '" target="_blank" rel="noopener">' + text + '</a>')
 			.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*|#[^)\s]*)\)/g,
 				'<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>')
 		const closeList = () => { if (inList) { html += '</ul>'; inList = false } }

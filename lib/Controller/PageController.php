@@ -99,6 +99,28 @@ class PageController extends Controller {
 		}
 	}
 
+	/**
+	 * An image's guide (<image>.guide.md beside its manifest), rendered here -
+	 * public, like the catalog; linked from the image's description in the
+	 * dialog and from the catalog.
+	 */
+	#[PublicPage]
+	#[NoCSRFRequired]
+	public function guide(string $image): TemplateResponse {
+		$md = $this->pods->guideMarkdown($image);
+		$title = \OCA\UserPods\Service\MarkdownLite::title($md);
+		$response = new PublicTemplateResponse('user_pods', 'guide', [
+			'html' => $md === '' ? '' : \OCA\UserPods\Service\MarkdownLite::toHtml($md,
+				fn (string $other) => $this->urlGenerator->linkToRoute('user_pods.page.guide', ['image' => $other])),
+			'catalogUrl' => $this->urlGenerator->linkToRoute('user_pods.page.catalog'),
+		]);
+		$response->setHeaderTitle($title !== '' ? $title : $this->l->t('Guide'));
+		if ($md === '') {
+			$response->setStatus(404);
+		}
+		return $response;
+	}
+
 	/** Template variables common to the guest variant of the run page. */
 	private function guestVars(array $vars): array {
 		return $vars + [

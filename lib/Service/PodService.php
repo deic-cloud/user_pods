@@ -954,6 +954,24 @@ class PodService {
 	}
 
 	/** A running server of this image for this user: its Jupyter URL opening $file, else ''. */
+	/**
+	 * An image's guide: <image>.guide.md next to its manifest (the in-depth text;
+	 * the .md beside the manifest stays the short description in the dialog).
+	 * '' when there is none.
+	 */
+	public function guideMarkdown(string $image): string {
+		if (!preg_match('/^[a-z0-9][a-z0-9_.-]*$/', $image)) {
+			return '';
+		}
+		try {
+			$response = $this->clientService->newClient()->get($this->rawManifestsURL . $image . '.guide.md',
+				['timeout' => 30, 'headers' => ['User-Agent' => 'Nextcloud-user_pods']]);
+			return (string)$response->getBody();
+		} catch (\Throwable) {
+			return ''; // no guide (404) or the repository unreachable
+		}
+	}
+
 	/** A server of $uid's of this image that is still starting (no notebook address yet), or ''. */
 	private function startingServer(string $uid, array $entry): string {
 		if ($entry['name'] === '') {
@@ -1023,6 +1041,9 @@ class PodService {
 				// featured: 1, 2, … (0 or nothing = not featured)
 				'featured' => is_numeric($featured) && (int)$featured > 0 ? (int)$featured : null,
 				'kernels' => trim((string)($a['catalog/notebook-kernels'] ?? '')),
+				// catalog/guide: the image has <image>.guide.md beside its manifest
+				'guide' => self::annotationOn(['metadata' => ['annotations' => $a]], 'catalog/guide')
+					? preg_replace('/\.yaml$/', '', (string)$file) : '',
 				'pod_types' => empty($l['types']) ? [] : explode('-', (string)$l['types']),
 				// the container supplies its address's path (e.g. a Jupyter token) after it starts
 				'wait_token' => in_array(strtolower(trim((string)($a['catalog/wait-for-token'] ?? ''))), ['1', 'true', 'yes'], true),
