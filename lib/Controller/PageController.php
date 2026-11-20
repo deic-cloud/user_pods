@@ -45,15 +45,15 @@ class PageController extends Controller {
 
 	/**
 	 * The page behind "Run this notebook" (catalogue landing pages, notebook
-	 * viewer): does the whole job server-side and either sends the browser
-	 * straight to the open notebook, or shows a waiting page that polls until
-	 * the new server is up and then goes there. A link to this page from a
-	 * public page works for anonymous visitors too: the login redirect brings
-	 * them back here afterwards.
+	 * viewer). Answers at once with a waiting page - starting a server takes
+	 * a while, and a link that seemed dead invited more clicks - which then
+	 * asks for the work (logged in: POST api/run-notebook; visitors:
+	 * runGuestStart) and goes to the open notebook, polling until a new server
+	 * is up. A link to this page from a public page works for anonymous
+	 * visitors too: the login redirect brings them back here afterwards.
 	 */
 	#[PublicPage]
 	#[NoCSRFRequired]
-	#[AnonRateLimit(limit: 10, period: 60)]
 	public function run(string $token = '', string $path = '', string $name = '', string $file = ''): TemplateResponse|RedirectResponse {
 		$uid = $this->userSession->getUser()?->getUID() ?? '';
 		if ($uid === '') {
@@ -63,40 +63,40 @@ class PageController extends Controller {
 				return new RedirectResponse($this->urlGenerator->linkToRoute('core.login.showLoginForm',
 					['redirect_url' => $this->request->getRequestUri()]));
 			}
-			try {
-				$res = $this->pods->runNotebookAsGuest($token, $path, $name, $this->request->getRemoteAddress());
-			} catch (PodHostException $e) {
-				return new TemplateResponse('user_pods', 'run', $this->guestVars(['error' => $e->getMessage()]), TemplateResponse::RENDER_AS_GUEST);
-			}
-			if (($res['status'] ?? '') === 'ready' && !empty($res['url'])) {
-				return new RedirectResponse((string)$res['url']);
-			}
 			return new TemplateResponse('user_pods', 'run', $this->guestVars([
 				'error' => '',
-				'pod' => (string)($res['pod'] ?? ''),
-				'file' => (string)($res['file'] ?? ''),
-				'image' => (string)($res['image'] ?? ''),
-				'status_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.page.guestStatus', ['gt' => (string)($res['guest'] ?? '')]),
-				'expires' => (int)($res['expires'] ?? 0),
+				'start_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.page.runGuestStart'),
+				'params' => ['token' => $token, 'path' => $path, 'name' => $name],
+				'status_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.page.guestStatus'),
 			]), TemplateResponse::RENDER_AS_GUEST);
-		}
-		try {
-			$res = $this->pods->runNotebook($uid, $token, $path, $name, $file);
-		} catch (PodHostException $e) {
-			return new TemplateResponse('user_pods', 'run', ['error' => $e->getMessage(), 'pod' => '', 'file' => '']);
-		}
-		if (($res['status'] ?? '') === 'ready' && !empty($res['url'])) {
-			return new RedirectResponse((string)$res['url']);
 		}
 		return new TemplateResponse('user_pods', 'run', [
 			'error' => '',
-			'pod' => (string)($res['pod'] ?? ''),
-			'file' => (string)($res['file'] ?? ''),
-			'image' => (string)($res['image'] ?? ''),
+			'start_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.api.runNotebook'),
+			'params' => ['token' => $token, 'path' => $path, 'name' => $name, 'file' => $file],
 			// the app's API is a plain route under index.php (not OCS)
 			'containers_url' => $this->urlGenerator->linkToRouteAbsolute('user_pods.api.containers'),
 			'pods_url' => $this->urlGenerator->linkToRoute('user_pods.page.index'),
 		]);
+	}
+
+	/**
+	 * Asked by the guest waiting page (run): start - or find, one per visitor
+	 * address - the throwaway pod for a public notebook link. See
+	 * PodService::runNotebookAsGuest() for the result; {error} otherwise.
+	 */
+	#[PublicPage]
+	#[NoCSRFRequired]
+	#[AnonRateLimit(limit: 10, period: 60)]
+	public function runGuestStart(string $token = '', string $path = '', string $name = ''): JSONResponse {
+		if (!$this->pods->guestPodsEnabled() || $token === '') {
+			return new JSONResponse(['error' => $this->l->t('Log in to run this notebook.')], 403);
+		}
+		try {
+			return new JSONResponse($this->pods->runNotebookAsGuest($token, $path, $name, $this->request->getRemoteAddress()));
+		} catch (PodHostException $e) {
+			return new JSONResponse(['error' => $e->getMessage()], 502);
+		}
 	}
 
 	/** Template variables common to the guest variant of the run page. */

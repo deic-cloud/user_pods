@@ -8,6 +8,8 @@ return [
 		['name' => 'page#run',   'url' => '/run', 'verb' => 'GET'],
 		// Guest (not logged in) run: the waiting page polls this by the guest token.
 		['name' => 'page#guestStatus', 'url' => '/guest/status', 'verb' => 'GET'],
+		// Guest run, asked by the waiting page: start (or find) the throwaway pod.
+		['name' => 'page#runGuestStart', 'url' => '/guest/start', 'verb' => 'POST'],
 		// The image catalog as a public page, with Launch links into the app.
 		['name' => 'page#catalog', 'url' => '/catalog', 'verb' => 'GET'],
 
