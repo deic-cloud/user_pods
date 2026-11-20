@@ -19,12 +19,12 @@ $card = static function (array $e) use ($l, $_): void { ?>
 			<h4 class="pods-card-title"><?php p($e['title']); ?></h4>
 		</div>
 		<p class="pods-card-summary"><?php p($e['summary']); ?></p>
+		<?php if (!empty($e['guide'])) { ?>
+			<p class="pods-card-guide"><a href="<?php p(\OCP\Server::get(\OCP\IURLGenerator::class)->linkToRoute('user_pods.page.guide', ['image' => $e['guide']])); ?>"><?php p($l->t('Read the guide')); ?></a></p>
+		<?php } ?>
 		<div class="pods-card-foot">
 			<?php if ($e['restricted']) { ?>
 				<span class="pods-card-badge"><?php p($l->t('Restricted')); ?></span>
-			<?php } ?>
-			<?php if (!empty($e['guide'])) { ?>
-				<a class="pods-card-guide" href="<?php p(\OCP\Server::get(\OCP\IURLGenerator::class)->linkToRoute('user_pods.page.guide', ['image' => $e['guide']])); ?>"><?php p($l->t('Guide')); ?></a>
 			<?php } ?>
 			<a class="button pods-card-launch" href="<?php p($_['launchUrl'] . '?yaml_file=' . rawurlencode($e['file'])); ?>"><?php p($l->t('Launch')); ?></a>
 		</div>
