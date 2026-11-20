@@ -588,6 +588,10 @@ class PodService {
 		if (($url = $this->runningServerUrl($uid, $entry, $file)) !== '') {
 			return ['status' => 'ready', 'url' => $url, 'file' => $file, 'image' => $entry['file']];
 		}
+		// one still starting (an earlier click): wait for it rather than start another
+		if (($pod = $this->startingServer($uid, $entry)) !== '') {
+			return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
+		}
 		// medium unless the manifest's `types` label leaves it out (e.g. MATLAB: large only,
 		// it is OOM-killed drawing figures in 2 GiB); then the largest type it allows.
 		$types = (array)($entry['pod_types'] ?? []);
@@ -782,12 +786,30 @@ class PodService {
 		[$base, $body] = $this->readPublicLink($token, $path, $name);
 		try {
 			$dir = $userFolder->nodeExists('Notebooks') ? $userFolder->get('Notebooks') : $userFolder->newFolder('Notebooks');
-			$rel = 'Notebooks/' . $base;
+			// An earlier copy is reused only when it is the same notebook: one the user
+			// changed, or an older version of the published one, is kept, and the
+			// notebook asked for is saved next to it ('name (2).ipynb') - running
+			// a stale copy made a demo open an old MATLAB version of a notebook
+			// published in Octave since.
+			$node = null;
 			if ($dir->nodeExists($base)) {
-				$node = $dir->get($base);
-			} else {
-				$node = $dir->newFile($base, $body);
+				$stem = preg_replace('/\.ipynb$/i', '', $base);
+				foreach (array_merge([$base], array_map(static fn ($i) => "$stem ($i).ipynb", range(2, 20))) as $candidate) {
+					if (!$dir->nodeExists($candidate)) {
+						continue;
+					}
+					$old = $dir->get($candidate);
+					if ($old instanceof \OCP\Files\File && $old->getContent() === $body) {
+						[$node, $base] = [$old, $candidate];
+						break;
+					}
+				}
+				if ($node === null) {
+					$base = $dir->getNonExistingName($base);
+				}
 			}
+			$rel = 'Notebooks/' . $base;
+			$node ??= $dir->newFile($base, $body);
 		} catch (\Throwable $e) {
 			throw new PodHostException('Could not save the notebook in your files: ' . $e->getMessage());
 		}
@@ -932,6 +954,26 @@ class PodService {
 	}
 
 	/** A running server of this image for this user: its Jupyter URL opening $file, else ''. */
+	/** A server of $uid's of this image that is still starting (no notebook address yet), or ''. */
+	private function startingServer(string $uid, array $entry): string {
+		if ($entry['name'] === '') {
+			return '';
+		}
+		$base = (string)$entry['name'] . '-' . preg_replace('/[@._]/', '-', $uid);
+		foreach ($this->getContainers($uid) as $c) {
+			$n = (string)($c['pod_name'] ?? '');
+			if ($n !== $base && !preg_match('/^' . preg_quote($base, '/') . '-\\d+$/', $n)) {
+				continue;
+			}
+			$status = (string)($c['status'] ?? '');
+			if (preg_match('/^(Terminating|Error|Failed|Completed|Succeeded|CrashLoop|ImagePull|ErrImage|Evicted)/i', $status)) {
+				continue;
+			}
+			return $n; // Pending, ContainerCreating, or Running without its notebook address yet
+		}
+		return '';
+	}
+
 	private function runningServerUrl(string $uid, array $entry, string $file): string {
 		$base = (string)$entry['name'] . '-' . preg_replace('/[@._]/', '-', $uid);
 		if ($entry['name'] === '') {
