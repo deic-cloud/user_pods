@@ -69,9 +69,15 @@
 				<div id="newpod-spinner" class="icon-loading" hidden></div>
 				<div id="login_group" class="pods-hidden">
 					<!-- before the description: who can use the container is the first thing to decide -->
-					<div class="login-group-title" title="<?php p($l->t('You log in with your account here; the members of the groups you tick log in with theirs.')); ?>"><?php p($l->t('Who may log in: you, and the members of')); ?></div>
-					<div id="login_group_list"></div>
-					<p class="login-group-none"><?php p($l->t('(no group ticked: just you)')); ?></p>
+					<label for="login_group_toggle"><?php p($l->t('Who may log in:')); ?></label>
+					<div class="login-group-dd">
+						<button type="button" id="login_group_toggle" class="pods-dd-toggle" aria-haspopup="true" aria-expanded="false"
+							title="<?php p($l->t('You log in with your account here; the members of the groups you tick log in with theirs.')); ?>"><?php p($l->t('Just me')); ?></button>
+						<div id="login_group_menu" class="login-group-menu" hidden>
+							<input type="search" id="login_group_filter" placeholder="<?php p($l->t('Filter groups')); ?>" hidden>
+							<div id="login_group_list"></div>
+						</div>
+					</div>
 				</div>
 				<div id="pods-reuse" class="pods-hidden"></div>
 				<div id="description" class="pods-hidden"></div>

@@ -54,6 +54,45 @@
 		}
 	}
 
+	// "Who may log in": a drop-down with a checkbox per group; the button sums up
+	// the choice (none ticked = just the owner)
+	function loginGroupSummary() {
+		const ticked = $all('#login_group_list input:checked').map((i) => i.value)
+		$('#login_group_toggle').textContent = ticked.length === 0 ? t(APP, 'Just me')
+			: ticked.length <= 2 ? t(APP, 'Me and {groups}', { groups: ticked.join(', ') }, undefined, { escape: false })
+				: n(APP, 'Me and %n group', 'Me and %n groups', ticked.length)
+	}
+	document.addEventListener('click', (e) => {
+		const menu = $('#login_group_menu')
+		const toggle = $('#login_group_toggle')
+		if (!menu || !toggle) return
+		if (toggle.contains(e.target)) {
+			menu.hidden = !menu.hidden
+			toggle.setAttribute('aria-expanded', String(!menu.hidden))
+			if (!menu.hidden && !$('#login_group_filter').hidden) $('#login_group_filter').focus()
+		} else if (!menu.hidden && !menu.contains(e.target)) {
+			menu.hidden = true
+			toggle.setAttribute('aria-expanded', 'false')
+		}
+	})
+	document.addEventListener('keydown', (e) => {
+		const menu = $('#login_group_menu')
+		if (e.key === 'Escape' && menu && !menu.hidden) {
+			menu.hidden = true
+			$('#login_group_toggle').setAttribute('aria-expanded', 'false')
+			$('#login_group_toggle').focus()
+			e.stopPropagation()
+		}
+	}, true)
+	document.addEventListener('change', (e) => {
+		if (e.target.closest && e.target.closest('#login_group_list')) loginGroupSummary()
+	})
+	document.addEventListener('input', (e) => {
+		if (e.target.id !== 'login_group_filter') return
+		const q = e.target.value.trim().toLowerCase()
+		$all('#login_group_list label').forEach((l) => { l.hidden = q !== '' && !l.textContent.toLowerCase().includes(q) })
+	})
+
 	// Minimal, safe markdown -> HTML for the manifest .md description.
 	function renderMarkdown(md) {
 		// &colon; is how the .md files keep GitHub from linking a URL; show it as ':'.
@@ -678,6 +717,11 @@
 		;(d.login_groups || []).forEach((g) => {
 			lg.insertAdjacentHTML('beforeend', '<label><input type="checkbox" value="' + esc(g) + '">' + esc(g) + '</label>')
 		})
+		$('#login_group_filter').value = ''
+		$('#login_group_filter').hidden = (d.login_groups || []).length <= 8
+		$('#login_group_menu').hidden = true
+		$('#login_group_toggle').setAttribute('aria-expanded', 'false')
+		loginGroupSummary()
 		show($('#login_group'), Array.isArray(d.login_groups))
 
 		if (d.pod_types && d.pod_types.length) {
