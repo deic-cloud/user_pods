@@ -102,6 +102,8 @@ class ApiController extends Controller {
 	 * ScienceData accounts, or {oidc: false} when it keeps its own login.
 	 * callback: the path the application in the pod takes logins back at
 	 * (default Overleaf's), fixed when the client is made.
+	 * home_url: this server's public address (overwrite.cli.url) - a pod reaches
+	 * it internally and cannot tell, e.g. for links it shows to readers.
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
@@ -111,7 +113,8 @@ class ApiController extends Controller {
 		} catch (\Throwable $e) {
 			return new JSONResponse(['message' => $e->getMessage()], Http::STATUS_SERVICE_UNAVAILABLE);
 		}
-		return new JSONResponse($client === null ? ['oidc' => false] : ['oidc' => true] + $client);
+		$home = rtrim((string)\OCP\Server::get(\OCP\IConfig::class)->getSystemValueString('overwrite.cli.url', ''), '/');
+		return new JSONResponse(($client === null ? ['oidc' => false] : ['oidc' => true] + $client) + ['home_url' => $home]);
 	}
 
 	/**
