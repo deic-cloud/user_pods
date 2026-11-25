@@ -24,9 +24,15 @@ ones (**+ New**):
   browser.
 - **Storage** — for images that mount the user's files: a folder under
   `/storage` (read-write) or `/files` (read-only).
-- **Allowed IP addresses** — a new container only accepts connections from
-  the address it was created from. The list can be changed afterwards
-  (**+ My IP** fills in the current address).
+- **Allowed IP addresses** — a new container's SSH and extra ports accept
+  connections only from the address it was created from. The list can be
+  changed afterwards (**+ My IP** fills in the current address); an empty list
+  closes them, `0.0.0.0/0` opens them to everyone.
+- **Public web address** — the web address is either public (anyone) or, like
+  SSH, limited to the allowed addresses. Images that publish a site (manifest
+  annotation `catalog/public-web: "1"`, e.g. Jupyter Book) start public, the
+  others private. The pod host remembers the choice for the container's name,
+  so a container started again gets it back.
 
 Per container the list shows its status, its web address (with the access
 token, for notebook servers), SSH details, extra ports, and its log. A
@@ -159,7 +165,7 @@ local addresses per request, so Nextcloud's instance-wide
 | `/api/pod` | POST | Create a container. |
 | `/api/run-notebook` | POST | Start a server for a notebook: `file` in the user's files, or `token`/`path`/`name` of a public link. |
 | `/api/pod/delete` | POST | Delete a container (`pod`). |
-| `/api/pod/allowed-ips` | POST | Change a container's allowed addresses. |
+| `/api/pod/allowed-ips` | POST | Change a container's allowed addresses (`ips`) and, with `web=public\|private`, its web access. |
 | `/api/pod/ports` | POST | Change a container's extra ports. |
 | `/api/pod/logs` | GET | A container's log. |
 

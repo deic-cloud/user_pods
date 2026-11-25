@@ -586,7 +586,8 @@ class PodService {
 	 *   ['status' => 'starting', 'pod' => <name>, 'file' => <path>]
 	 * and throws PodHostException with a message meant for the user otherwise.
 	 */
-	public function runNotebook(string $uid, string $token = '', string $path = '', string $name = '', string $ownFile = ''): array {
+	public function runNotebook(string $uid, string $token = '', string $path = '', string $name = '', string $ownFile = '',
+		string $clientIp = ''): array {
 		if ($this->rootFolder === null) {
 			throw new PodHostException('Files unavailable');
 		}
@@ -627,7 +628,10 @@ class PodService {
 		// it is OOM-killed drawing figures in 2 GiB); then the largest type it allows.
 		$types = (array)($entry['pod_types'] ?? []);
 		$podType = ($types === [] || in_array('medium', $types, true)) ? 'medium' : (string)end($types);
-		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '', '', $podType);
+		// The reader's address: pod ports are closed to all others (and to everyone
+		// without one)
+		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '',
+			substr(trim($clientIp), 0, 45), $podType);
 		$pod = (string)($res['name'] ?? $res['pod_name'] ?? ($res['data']['name'] ?? ''));
 		return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
 	}
@@ -1228,9 +1232,20 @@ class PodService {
 		return in_array(strtolower(trim((string)$v)), ['1', 'true', 'yes'], true);
 	}
 
-	public function setAllowedIps(string $uid, string $podName, string $ips): array {
-		$json = $this->httpGet($this->podEndpoint('set_allowed_ips.php',
-			['user_id' => $uid, 'pod' => $podName, 'ips' => $ips]), false);
+	/**
+	 * SSH and extra ports: open only to $ips (comma-separated addresses/CIDRs; empty
+	 * closes them). $web: 'public' (web address open to everyone), 'private' (like
+	 * SSH) or '' (unchanged); the pod host remembers it for the pod name.
+	 */
+	public function setAllowedIps(string $uid, string $podName, string $ips, string $web = ''): array {
+		if (!in_array($web, ['', 'public', 'private'], true)) {
+			throw new PodHostException('Web access must be public or private.');
+		}
+		$params = ['user_id' => $uid, 'pod' => $podName, 'ips' => $ips];
+		if ($web !== '') {
+			$params['web'] = $web;
+		}
+		$json = $this->httpGet($this->podEndpoint('set_allowed_ips.php', $params), false);
 		return json_decode($json, true) ?: [];
 	}
 

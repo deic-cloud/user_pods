@@ -273,10 +273,19 @@
 			rows += '<tr><td class="expanded-column-name">ssh access:</td>'
 				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-url"><a href="' + esc(c.ssh_url) + '">' + esc(c.ssh_url) + '</a></span></td></tr>'
 		}
-		// Who may reach the container's SSH and web ports (both firewalled to these addresses).
+		// The web address: public (anyone) or private (the addresses below). Images that
+		// publish a site start public; the others private.
+		if (c.url && (c.web_access === 'public' || c.web_access === 'private')) {
+			rows += '<tr><td class="expanded-column-name">public web address:</td><td class="expanded-column-value"><span>'
+				+ '<input type="checkbox" class="public_web"' + (c.web_access === 'public' ? ' checked="checked"' : '')
+				+ ' title="' + esc(t(APP, 'Anyone may open the container\'s web address. Off: only the addresses below.')) + '" />'
+				+ '<span class="public_web_status" aria-live="polite"></span></span></td></tr>'
+		}
+		// Who may reach the container's SSH and extra ports - and its web address unless
+		// that is public. An empty list closes them.
 		if (c.ssh_url || c.url) {
 			rows += '<tr><td class="expanded-column-name">access from:</td>'
-				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses')) + '" value="' + esc(ipList(c.allowed_ips)) + '" data-saved="' + esc(ipList(c.allowed_ips)) + '" />'
+				+ '<td class="expanded-column-value"><span class="expanded-row-ssh-ip"><input class="allowed_ip" type="text" title="' + esc(t(APP, 'Allowed client IP addresses (empty: none; 0.0.0.0/0: everyone)')) + '" value="' + esc(ipList(c.allowed_ips)) + '" data-saved="' + esc(ipList(c.allowed_ips)) + '" />'
 				+ '<label class="button add_current_ip" title="' + esc(t(APP, 'Add your current IP')) + '">+My IP</label>'
 				+ '<label class="button set_allowed_ips" title="' + esc(t(APP, 'Apply these addresses to the firewall (or press Enter)')) + '">' + esc(t(APP, 'Set')) + '</label>'
 				+ '<span class="allowed_ips_status" aria-live="polite"></span></span></td></tr>'
@@ -355,6 +364,12 @@
 						input.value = cur
 						markAllowedIPs(input)
 					}
+				})
+			}
+			const pub = $('.public_web', expanded)
+			if (pub) {
+				pub.addEventListener('change', function() {
+					setPublicWeb(c.pod_name, this, ip)
 				})
 			}
 			const keep = $('.keep_ports', expanded)
@@ -498,7 +513,7 @@
 				input.value = ips
 				input.dataset.saved = ips
 				span.classList.remove('unsaved')
-				report(true, ips === '' ? t(APP, 'Firewall updated: open to all addresses')
+				report(true, ips === '' ? t(APP, 'Firewall updated: closed to all addresses')
 					: t(APP, 'Firewall updated'))
 			})
 			.catch((e) => {
@@ -506,6 +521,41 @@
 				alertError(t(APP, 'set_allowed_ips: Something went wrong. ') + e)
 			})
 			.finally(() => { setAllowedIPsBusy = false })
+	}
+
+	// Public web address on/off. The addresses sent are the applied ones (not what may
+	// be typed in the field but not set yet), so only the web port changes.
+	function setPublicWeb(podName, box, ipInput) {
+		const web = box.checked ? 'public' : 'private'
+		const status = box.parentNode.querySelector('.public_web_status')
+		const report = (ok, text) => {
+			if (!status) return
+			status.classList.remove('ok', 'failed')
+			status.classList.add(ok ? 'ok' : 'failed')
+			status.textContent = text
+		}
+		box.disabled = true
+		if (status) {
+			status.classList.remove('ok', 'failed')
+			status.innerHTML = '<span class="icon-loading-small"></span>' + esc(t(APP, 'Updating firewall…'))
+		}
+		const ips = ipInput ? (ipInput.dataset.saved || '') : ''
+		apiPost('api/pod/allowed-ips', { pod: podName, ips: ips, web: web }, 'Setting firewall rules…')
+			.then((json) => {
+				if (!hostOk(json)) {
+					box.checked = !box.checked
+					report(false, t(APP, 'Not applied'))
+					alertError(t(APP, 'set_allowed_ips: ') + (hostMessage(json) || t(APP, 'Something went wrong…')))
+					return
+				}
+				report(true, web === 'public' ? t(APP, 'Open to everyone') : t(APP, 'Only the addresses below'))
+			})
+			.catch((e) => {
+				box.checked = !box.checked
+				report(false, t(APP, 'Not applied'))
+				alertError(t(APP, 'set_allowed_ips: Something went wrong. ') + e)
+			})
+			.finally(() => { box.disabled = false })
 	}
 
 	function setPortNumbers(podName, httpsPort, sshPort, extraPorts) {

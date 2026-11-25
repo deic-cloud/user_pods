@@ -81,7 +81,8 @@ class ApiController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function runNotebook(string $token = '', string $path = '', string $name = '', string $file = ''): JSONResponse {
-		return $this->host(fn () => $this->pods->runNotebook($this->uid(), $token, $path, $name, $file));
+		return $this->host(fn () => $this->pods->runNotebook($this->uid(), $token, $path, $name, $file,
+			$this->request->getRemoteAddress()));
 	}
 
 	#[NoAdminRequired]
@@ -168,8 +169,8 @@ class ApiController extends Controller {
 	}
 
 	#[NoAdminRequired]
-	public function allowedIps(string $pod, string $ips = ''): JSONResponse {
-		return $this->host(fn () => $this->pods->setAllowedIps($this->uid(), $pod, $ips));
+	public function allowedIps(string $pod, string $ips = '', string $web = ''): JSONResponse {
+		return $this->host(fn () => $this->pods->setAllowedIps($this->uid(), $pod, $ips, $web));
 	}
 
 	#[NoAdminRequired]
