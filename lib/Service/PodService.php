@@ -157,6 +157,37 @@ class PodService {
 	 * container attaches it over NFS: this server is the user's home server, so
 	 * the folder is local. Refuses a $sub that climbs out of the user's folder.
 	 */
+	/**
+	 * Make sure the folder $sub in the user's ordinary files exists before a pod
+	 * mounts it under /files/ - an NFS mount of a missing folder fails and leaves the
+	 * pod waiting. Made a level at a time, through the files API (so it shows in the
+	 * Files app at once). E.g. Jupyter Book on a new folder, which then fills it with
+	 * a starter book.
+	 */
+	public function createFilesDir(string $uid, string $sub): void {
+		$sub = trim($sub, '/');
+		if ($sub === '' || $this->rootFolder === null) {
+			return;
+		}
+		$levels = explode('/', $sub);
+		if (in_array('..', $levels, true) || in_array('.', $levels, true) || in_array('', $levels, true)) {
+			throw new PodHostException('Invalid folder: /files/' . $sub);
+		}
+		try {
+			$folder = $this->rootFolder->getUserFolder($uid);
+			foreach ($levels as $level) {
+				$folder = $folder->nodeExists($level) ? $folder->get($level) : $folder->newFolder($level);
+				if (!($folder instanceof \OCP\Files\Folder)) {
+					throw new PodHostException('Not a folder: /files/' . $sub);
+				}
+			}
+		} catch (PodHostException $e) {
+			throw $e;
+		} catch (\Throwable $e) {
+			throw new PodHostException('Could not create the folder /files/' . $sub . ': ' . $e->getMessage());
+		}
+	}
+
 	public function createStorageDir(string $uid, string $sub = ''): void {
 		if ($this->storageDir === '') {
 			return;
@@ -1142,6 +1173,9 @@ class PodService {
 		}
 		if ($mountRoot === 'storage' && $mountPath !== '') {
 			$this->createStorageDir($uid, $mountPath);
+		}
+		if ($mountRoot === 'files' && $mountPath !== '') {
+			$this->createFilesDir($uid, $mountPath);
 		}
 		// Pods keep their backups in Containers: not for the desktop sync clients
 		if (!$guest) {
