@@ -745,11 +745,18 @@
 				const mountPath = mountPaths[name]
 				const mountName = String(mountPath).substring(String(mountPath).lastIndexOf('/') + 1)
 				if (!mountPath || !mountName) return
-				const filesOpt = (d.nfs_rw && d.nfs_rw === 'yes') ? '' : '<option value="files">/files/</option>'
+				// NFS_RW in the manifest: "yes" - the image writes into the folder, so only
+				// /storage/ (read-write); "no" - it only reads, and its folder belongs in
+				// the ordinary files (web interface, sync client, share links), so only
+				// /files/; unset - either.
+				const nfsRw = d.nfs_rw || ''
+				const storageOpt = nfsRw === 'no' ? '' : '<option value="storage">/storage/</option>'
+				const filesOpt = nfsRw === 'yes' ? '' : '<option value="files">/files/</option>'
+				const firstRoot = nfsRw === 'no' ? 'files' : 'storage'
 				let mountInput = '<span>' + esc(t(APP, 'Mount source:')) + ' </span>'
-					+ '<select id="mount_root"><option value="storage">/storage/</option>' + filesOpt + '</select>'
+					+ '<select id="mount_root">' + storageOpt + filesOpt + '</select>'
 				mountInput += '<input id="mount_input" data-image-name="' + esc(container.image_name) + '" type="text" placeholder="'
-					+ esc(t(APP, 'Path')) + '" data-mount-root="storage" data-mount-path="' + esc(mountPath) + '" title="'
+					+ esc(t(APP, 'Path')) + '" data-mount-root="' + firstRoot + '" data-mount-path="' + esc(mountPath) + '" title="'
 					+ esc(t(APP, 'Directory to mount on') + ' ' + mountPath + ' ' + t(APP, 'inside the container')) + '">'
 				const storage = $('#storage')
 				storage.innerHTML = mountInput

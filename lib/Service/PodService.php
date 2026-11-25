@@ -1124,15 +1124,20 @@ class PodService {
 				throw new PodHostException($e->getMessage());
 			}
 		}
-		// An image that writes into its mounted folder (NFS_RW: "yes" in the
-		// manifest) only works on a /storage/ mount: /files/ mounts are read-only.
-		// The dialog hides /files/ for such images; the API refuses it, so a
-		// direct call cannot start a pod that is bound to fail.
-		if ($mountRoot === 'files') {
+		// NFS_RW in the manifest fixes the mount source: "yes" - the image writes
+		// into its folder, which only works on a /storage/ mount (/files/ mounts are
+		// read-only); "no" - it only reads, and its folder belongs in the ordinary
+		// files (web interface, sync client, share links), so only /files/. The
+		// dialog offers only the allowed one; the API refuses the other, so a direct
+		// call cannot start a pod that is bound to fail.
+		if ($mountRoot === 'files' || $mountRoot === 'storage') {
 			$yamlFile = basename((string)(parse_url($yamlUrl, PHP_URL_PATH) ?: $yamlUrl));
 			$info = $this->checkManifest($uid, $yamlFile);
-			if (($info['nfs_rw'] ?? '') === 'yes') {
+			if ($mountRoot === 'files' && ($info['nfs_rw'] ?? '') === 'yes') {
 				throw new PodHostException('This image writes to its mounted folder; mount a /storage/ folder, not /files/ (read-only).');
+			}
+			if ($mountRoot === 'storage' && ($info['nfs_rw'] ?? '') === 'no') {
+				throw new PodHostException('This image reads its folder from your files; choose a folder under /files/, not /storage/.');
 			}
 		}
 		if ($mountRoot === 'storage' && $mountPath !== '') {
