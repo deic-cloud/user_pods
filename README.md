@@ -75,9 +75,9 @@ That server admits only the addresses it allows; if the reader now comes from
 another one (home, eduroam, VPN), the page asks before adding it - anyone else
 behind that address could then reach the server's login page.
 
-With a notebook viewer configured (`nbviewerURL`), catalogue entries (and the
-Moodle image's share-link previews) show **View this notebook** - the rendered
-notebook, nothing started - before a lighter **Run this notebook**.
+With files_viewers installed, catalogue entries show **View this notebook** -
+files_viewers' notebook page, rendered in the browser, nothing started - before
+a lighter **Run this notebook**.
 
 A notebook already in the user's files is run with `run?file=<path>`; the
 notebook viewer (files_viewers) offers this as **Open in Jupyter**.
@@ -135,7 +135,6 @@ per instance (each node of a multi-node installation has its own).
 | Guest pod lifetime (`guestPodLifetime`) | 60 | Minutes from start until a guest server is deleted. |
 | Guest pods at the same time (`guestMaxPods`) | 10 | Ceiling for the whole service; one per visitor address on top of that. |
 | Guest pod type (`guestPodType`) | medium | Size of guest servers. |
-| Notebook viewer (`nbviewerURL`) | — | nbviewer service for **View this notebook** (catalogue pages); empty = no View button. |
 | Manifest library — listing API (`manifestsURL`) | GitHub contents API of pod_manifests | Where the list of image manifests is read. |
 | Manifest library — raw file base (`rawManifestsURL`) | raw.githubusercontent.com/…/pod_manifests/main/ | Base URL of the manifest `.yaml` files and their `.md` descriptions. |
 
