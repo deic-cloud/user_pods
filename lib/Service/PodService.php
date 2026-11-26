@@ -584,10 +584,13 @@ class PodService {
 	 * started with the file set. Returns
 	 *   ['status' => 'ready',    'url' => <Jupyter URL opening the notebook>, 'file' => <path>]
 	 *   ['status' => 'starting', 'pod' => <name>, 'file' => <path>]
+	 *   ['status' => 'needs_address', 'pod', 'address', 'allowed', 'file'] - the server to
+	 *     reuse does not admit $clientIp; asked again with $allowAddress, it is added
 	 * and throws PodHostException with a message meant for the user otherwise.
 	 */
 	public function runNotebook(string $uid, string $token = '', string $path = '', string $name = '', string $ownFile = '',
-		string $clientIp = ''): array {
+		string $clientIp = '', bool $allowAddress = false): array {
+		$clientIp = substr(trim($clientIp), 0, 45);
 		if ($this->rootFolder === null) {
 			throw new PodHostException('Files unavailable');
 		}
@@ -617,11 +620,28 @@ class PodService {
 		if ($entry === null) {
 			throw new PodHostException('No notebook image is available for the kernel "' . $kernel . '"');
 		}
-		if (($url = $this->runningServerUrl($uid, $entry, $file)) !== '') {
+		// A server already running or starting (an earlier click) is reused - but it admits
+		// only its allowed addresses, and the reader may be elsewhere now (home, eduroam,
+		// VPN). Then ask before opening it to this address too (allow_address).
+		$c = null;
+		$url = $this->runningServerUrl($uid, $entry, $file, $c);
+		$pod = $url === '' ? $this->startingServer($uid, $entry, $c) : '';
+		if ($c !== null && !$this->admits($c, $clientIp)) {
+			if (!$allowAddress) {
+				return ['status' => 'needs_address', 'pod' => (string)$c['pod_name'], 'address' => $clientIp,
+					'allowed' => (string)($c['allowed_ips'] ?? ''), 'file' => $file, 'image' => $entry['file']];
+			}
+			$ips = array_values(array_filter(array_map('trim', explode(',', (string)($c['allowed_ips'] ?? '')))));
+			$ips[] = $clientIp;
+			$res = $this->setAllowedIps($uid, (string)$c['pod_name'], implode(',', array_unique($ips)));
+			if (($res['status'] ?? '') !== 'success') {
+				throw new PodHostException('Your address could not be added to the server\'s allowed addresses.');
+			}
+		}
+		if ($url !== '') {
 			return ['status' => 'ready', 'url' => $url, 'file' => $file, 'image' => $entry['file']];
 		}
-		// one still starting (an earlier click): wait for it rather than start another
-		if (($pod = $this->startingServer($uid, $entry)) !== '') {
+		if ($pod !== '') {
 			return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
 		}
 		// medium unless the manifest's `types` label leaves it out (e.g. MATLAB: large only,
@@ -631,7 +651,7 @@ class PodService {
 		// The reader's address: pod ports are closed to all others (and to everyone
 		// without one)
 		$res = $this->createPod($uid, $this->rawManifestsURL . $entry['file'], '', '', '', '', $file, '', '',
-			substr(trim($clientIp), 0, 45), $podType);
+			$clientIp, $podType);
 		$pod = (string)($res['name'] ?? $res['pod_name'] ?? ($res['data']['name'] ?? ''));
 		return ['status' => 'starting', 'pod' => $pod, 'file' => $file, 'image' => $entry['file']];
 	}
@@ -1008,7 +1028,48 @@ class PodService {
 	}
 
 	/** A server of $uid's of this image that is still starting (no notebook address yet), or ''. */
-	private function startingServer(string $uid, array $entry): string {
+	/**
+	 * Whether a container's web address admits $ip: public, or $ip within one of its
+	 * allowed addresses. An unknown address is not held against it. (A pod host
+	 * without web_access - before sciencedata_kubernetes 0027 - left a container
+	 * without addresses open.)
+	 */
+	private function admits(array $c, string $ip): bool {
+		$web = (string)($c['web_access'] ?? '');
+		$allowed = array_filter(array_map('trim', explode(',', (string)($c['allowed_ips'] ?? ''))));
+		if ($ip === '' || $web === 'public' || ($web === '' && $allowed === [])) {
+			return true;
+		}
+		foreach ($allowed as $cidr) {
+			if (self::ipInCidr($ip, $cidr)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** $ip within $cidr ("a.b.c.d", "a.b.c.0/24", IPv6 alike). */
+	private static function ipInCidr(string $ip, string $cidr): bool {
+		[$net, $bits] = array_pad(explode('/', $cidr, 2), 2, null);
+		$a = @inet_pton($ip);
+		$b = @inet_pton((string)$net);
+		if ($a === false || $b === false || strlen($a) !== strlen($b)) {
+			return false;
+		}
+		$bits = $bits === null || $bits === '' ? strlen($a) * 8 : max(0, min(strlen($a) * 8, (int)$bits));
+		$bytes = intdiv($bits, 8);
+		if (substr($a, 0, $bytes) !== substr($b, 0, $bytes)) {
+			return false;
+		}
+		$rest = $bits % 8;
+		if ($rest === 0) {
+			return true;
+		}
+		$mask = (0xff << (8 - $rest)) & 0xff;
+		return (ord($a[$bytes]) & $mask) === (ord($b[$bytes]) & $mask);
+	}
+
+	private function startingServer(string $uid, array $entry, ?array &$container = null): string {
 		if ($entry['name'] === '') {
 			return '';
 		}
@@ -1022,12 +1083,13 @@ class PodService {
 			if (preg_match('/^(Terminating|Error|Failed|Completed|Succeeded|CrashLoop|ImagePull|ErrImage|Evicted)/i', $status)) {
 				continue;
 			}
+			$container = $c;
 			return $n; // Pending, ContainerCreating, or Running without its notebook address yet
 		}
 		return '';
 	}
 
-	private function runningServerUrl(string $uid, array $entry, string $file): string {
+	private function runningServerUrl(string $uid, array $entry, string $file, ?array &$container = null): string {
 		$base = (string)$entry['name'] . '-' . preg_replace('/[@._]/', '-', $uid);
 		if ($entry['name'] === '') {
 			return '';
@@ -1048,6 +1110,7 @@ class PodService {
 			$origin = ($u['scheme'] ?? 'https') . '://' . ($u['host'] ?? '') . (isset($u['port']) ? ':' . $u['port'] : '');
 			$lab = str_contains((string)($u['path'] ?? ''), '/lab') || str_contains((string)$entry['file'], 'jupyterlab');
 			$enc = implode('/', array_map('rawurlencode', explode('/', $file)));
+			$container = $c;
 			return $origin . ($lab ? '/lab/tree/' : '/notebooks/') . $enc . '?token=' . rawurlencode((string)$q['token']);
 		}
 		return '';

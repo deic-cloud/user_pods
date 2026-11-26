@@ -80,9 +80,10 @@ class ApiController extends Controller {
 	 * PodService::runNotebook() for the result shape.
 	 */
 	#[NoAdminRequired]
-	public function runNotebook(string $token = '', string $path = '', string $name = '', string $file = ''): JSONResponse {
+	public function runNotebook(string $token = '', string $path = '', string $name = '', string $file = '',
+		string $allow_address = ''): JSONResponse {
 		return $this->host(fn () => $this->pods->runNotebook($this->uid(), $token, $path, $name, $file,
-			$this->request->getRemoteAddress()));
+			$this->request->getRemoteAddress(), $allow_address === '1'));
 	}
 
 	#[NoAdminRequired]

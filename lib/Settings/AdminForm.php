@@ -15,7 +15,7 @@ use OCP\Settings\IDeclarativeSettingsForm;
  * app's config (user_pods/<field id>) — the exact keys PodService consumes —
  * so no controller or JS is needed. Field ids therefore MUST match the keys in
  * PodService: publicIP, podManagementIP, storageDir, maxPodsPerUser, unlimitedPodUsers,
- * guestPods, guestPodLifetime, guestMaxPods, guestPodType, manifestsURL, rawManifestsURL.
+ * guestPods, guestPodLifetime, guestMaxPods, guestPodType, nbviewerURL, manifestsURL, rawManifestsURL.
  */
 class AdminForm implements IDeclarativeSettingsForm {
 	public function getSchema(): array {
@@ -122,6 +122,14 @@ class AdminForm implements IDeclarativeSettingsForm {
 					'type' => DeclarativeSettingsTypes::TEXT,
 					'placeholder' => 'medium',
 					'default' => 'medium',
+				],
+				[
+					'id' => 'nbviewerURL',
+					'title' => 'Notebook viewer',
+					'description' => 'Address of an nbviewer service. Public notebooks then get a "View this notebook" button (the rendered notebook, nothing started) before "Run this notebook". Empty: no View button.',
+					'type' => DeclarativeSettingsTypes::TEXT,
+					'placeholder' => 'https://nbviewer.example.org',
+					'default' => '',
 				],
 				[
 					'id' => 'manifestsURL',

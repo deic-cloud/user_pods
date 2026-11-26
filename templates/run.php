@@ -31,6 +31,17 @@
 			<?php if ($guest): ?><?php p($l->t('Please try again in a few minutes.')); ?>
 			<?php else: ?><a href="<?php p($_['pods_url']); ?>"><?php p($l->t('See your containers')); ?></a><?php endif; ?></p>
 	</div>
+	<?php if (!$guest): ?>
+	<div id="run-address" hidden>
+		<h2><?php p($l->t('Open your notebook server to this address?')); ?></h2>
+		<p id="run-address-text"></p>
+		<p><?php p($l->t('Anyone else using the same address - on the same network or VPN - could then reach the server\'s login page. The notebooks themselves still need your server\'s secret link.')); ?></p>
+		<p>
+			<button type="button" class="primary" id="run-address-allow"></button>
+			<a class="button" href="<?php p($_['pods_url']); ?>"><?php p($l->t('Cancel and see your containers')); ?></a>
+		</p>
+	</div>
+	<?php endif; ?>
 	<script nonce="<?php p(\OCP\Server::get(\OC\Security\CSP\ContentSecurityPolicyNonceManager::class)->getNonce()); ?>">
 	(function () {
 		// Not OC.requestToken: the global OC is not defined on this page in NC34.
@@ -45,6 +56,9 @@
 			gone: <?php print_unescaped(json_encode($l->t('The server is no longer available.'))); ?>,
 			waitingFor: <?php print_unescaped(json_encode($l->t('Waiting for %s…', ['%s']))); ?>,
 			copy: <?php print_unescaped(json_encode($l->t('Your copy of the notebook is in your files as %s. A server for it is starting; this usually takes about a minute, longer the first time an image is used on a machine.', ['%s']))); ?>,
+			needsAddress: <?php print_unescaped(json_encode($l->t('Your notebook server %1$s is already running, but it accepts connections only from %2$s. You are connecting from %3$s now.', ['%1$s', '%2$s', '%3$s']))); ?>,
+			nowhere: <?php print_unescaped(json_encode($l->t('no address'))); ?>,
+			allow: <?php print_unescaped(json_encode($l->t('Allow %s and open it', ['%s']))); ?>,
 			failed: <?php print_unescaped(json_encode($l->t('The request failed. Please reload the page to try again.'))); ?>
 		};
 		var token = document.head.dataset.requesttoken || '';
@@ -93,16 +107,34 @@
 				.catch(function () { setTimeout(function () { pollPod(pod); }, 8000); });
 		}
 
-		// The work itself, asked for once per page
-		var body = new URLSearchParams(params);
+		// The running server does not admit this address: ask, then ask the server again
+		// with allow_address - for the copy already made (file), so it is not copied twice
+		function askAddress(j) {
+			$('run-wait').hidden = true;
+			$('run-address-text').textContent = T.needsAddress.replace('%1$s', j.pod)
+				.replace('%2$s', j.allowed || T.nowhere).replace('%3$s', j.address);
+			var b = $('run-address-allow');
+			b.textContent = T.allow.replace('%s', j.address);
+			b.onclick = function () {
+				b.disabled = true;
+				$('run-address').hidden = true;
+				$('run-wait').hidden = false;
+				start({ file: j.file, allow_address: '1' });
+			};
+			$('run-address').hidden = false;
+		}
+
+		// The work itself
+		function start(p) {
 		fetch(startUrl, {
-			method: 'POST', body: body, credentials: 'same-origin',
+			method: 'POST', body: new URLSearchParams(p), credentials: 'same-origin',
 			headers: { 'OCS-APIRequest': 'true', 'requesttoken': token },
 		})
 			.then(function (r) { return r.json().catch(function () { return {}; }); })
 			.then(function (j) {
 				var err = j.error || (j.status === 'error' && j.data && j.data.message) || '';
 				if (err) { fail(err); return; }
+				if (!guest && j.status === 'needs_address') { askAddress(j); return; }
 				if (j.status === 'ready' && j.url) { location.href = j.url; return; }
 				if (guest && j.guest) { status(T.starting); setTimeout(function () { pollGuest(j.guest); }, 3000); return; }
 				if (!guest && j.pod) {
@@ -114,6 +146,8 @@
 				fail('');
 			})
 			.catch(function () { fail(''); });
+		}
+		start(params);
 	})();
 	</script>
 	<?php endif; ?>
